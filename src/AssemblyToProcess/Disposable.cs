@@ -4,6 +4,12 @@
 
     public class Disposable : IDisposable
     {
+        public string APublicText { get; set; }
+
+        protected string AProtectedText { get; set; }
+
+        protected string APrivateText { get; set; }
+
         /// <summary>
         ///     Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
         /// </summary>
@@ -12,17 +18,28 @@
         }
 
         /// <summary>
-        ///     Returns something.
+        ///     Returns a <see cref="String" /> with 'Hello World!' as result.
         /// </summary>
         /// <returns>
         ///     Hello World!
         /// </returns>
-        public string SayMeSomething()
+        public string SayMeHelloWorld()
         {
             return "Hello World!";
         }
 
+        /// <summary>
+        ///     Writes 'Hello World!' to the console.
+        /// </summary>
         public void DoSomething()
+        {
+            Console.WriteLine("Hello World!");
+        }
+
+        /// <summary>
+        ///     Does nothing and returns nothing.
+        /// </summary>
+        public void DoNothing()
         {
         }
     }

@@ -10,12 +10,12 @@
         }
 
         /// <summary>
-        ///     Returns something.
+        ///     Returns a <see cref="string" /> with 'Hello World!' as result.
         /// </summary>
         /// <returns>
         ///     Hello World!
         /// </returns>
-        public string SayMeSomething()
+        public string SayMeHelloWorld()
         {
             return "Hello World!";
         }

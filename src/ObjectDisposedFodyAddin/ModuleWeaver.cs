@@ -6,6 +6,7 @@
 
     using Mono.Cecil;
     using Mono.Cecil.Cil;
+    using Mono.Cecil.Rocks;
 
     public class ModuleWeaver
     {
@@ -105,6 +106,8 @@
                     {
                         ilProcessor.InsertBefore(firstInstruction, instruction);
                     }
+
+                    method.Body.OptimizeMacros();
                 }
             }
         }
@@ -170,6 +173,8 @@
                     {
                         ilProcessor.InsertBefore(firstInstruction, instruction);
                     }
+
+                    method.Body.OptimizeMacros();
                 }
             }
         }
