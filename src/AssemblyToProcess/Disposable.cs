@@ -2,7 +2,7 @@
 {
     using System;
 
-    public class Diposable : IDisposable
+    public class Disposable : IDisposable
     {
         /// <summary>
         ///     Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
@@ -20,6 +20,10 @@
         public string SayMeSomething()
         {
             return "Hello World!";
+        }
+
+        public void DoSomething()
+        {
         }
     }
 }

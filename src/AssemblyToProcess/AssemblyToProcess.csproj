@@ -40,7 +40,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AsyncDisposable.cs" />
-    <Compile Include="Diposable.cs" />
+    <Compile Include="Disposable.cs" />
     <Compile Include="IAsyncDisposable.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

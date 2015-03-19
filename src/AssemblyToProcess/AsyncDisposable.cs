@@ -19,5 +19,10 @@
         {
             return "Hello World!";
         }
+
+        public Task DoSomethingAsync()
+        {
+            return Task.FromResult(0);
+        }
     }
 }
