@@ -5,10 +5,9 @@
     using System.Linq;
 
     using Mono.Cecil;
-    using Mono.Cecil.Cil;
     using Mono.Cecil.Rocks;
 
-    public class ModuleWeaver
+    public sealed class ModuleWeaver
     {
         /// <summary>
         ///     The constructor reference with string as argument of the <see cref="ObjectDisposedException" /> class.
@@ -80,8 +79,8 @@
                                                                                                                  !x.IsAbstract &&
                                                                                                                  !x.IsInterface &&
                                                                                                                  x.Interfaces.Any(i => i.Name == "IDisposable" || i.Name == "IAsyncDisposable") &&
-                                                                                                                 !IsGeneratedCode(x) &&
-                                                                                                                 !MustSkipDisposeCheck(x.CustomAttributes)));
+                                                                                                                 !x.IsGeneratedCode() &&
+                                                                                                                 !x.SkipDisposeGuard()));
             var objectDisposedExceptionConstructor = msCoreTypes.First(x => x.Name == "ObjectDisposedException")
                                                                 .Methods.First(x => x.Name == ".ctor" &&
                                                                                     x.Parameters.Any(p => p.ParameterType.Name == "String"));
@@ -112,7 +111,7 @@
                     var ilProcessor = method.Body.GetILProcessor();
                     var firstInstruction = method.Body.Instructions.FirstOrDefault();
 
-                    var newInstructions = GetSetIsDisposedInstructions(ilProcessor, disposeField);
+                    var newInstructions = Instructions.GetSetIsDisposedInstructions(ilProcessor, disposeField);
                     foreach (var instruction in newInstructions)
                     {
                         ilProcessor.InsertBefore(firstInstruction, instruction);
@@ -157,16 +156,6 @@
             this.LogDebug("AddIsDisposedPrivateMember method executed successfully.");
         }
 
-        private static bool MustSkipDisposeCheck(IEnumerable<CustomAttribute> customAttributes)
-        {
-            return customAttributes.Any(x => x.AttributeType.FullName == "ObjectDisposedFodyAddin.SkipDisposeCheck");
-        }
-
-        private static bool IsGeneratedCode(ICustomAttributeProvider typeDefinition)
-        {
-            return typeDefinition.CustomAttributes.Any(a => a.AttributeType.Name == "CompilerGeneratedAttribute" || a.AttributeType.Name == "GeneratedCodeAttribute");
-        }
-
         private void AddGuardInstructionsIntoDisposeMethods()
         {
             this.LogDebug("Entry into ObjectDisposedFodyAddin AddGuardInstructionsIntoDisposeMethods method");
@@ -187,7 +176,10 @@
                     var ilProcessor = method.Body.GetILProcessor();
                     var firstInstruction = method.Body.Instructions.FirstOrDefault();
 
-                    var newInstructions = this.GetGuardInstructions(ilProcessor, method, disposeField);
+                    var newInstructions = Instructions.GetGuardInstructions(ilProcessor,
+                                                                            type,
+                                                                            disposeField,
+                                                                            this.objectDisposedExceptionReference);
                     foreach (var instruction in newInstructions)
                     {
                         ilProcessor.InsertBefore(firstInstruction, instruction);
@@ -198,29 +190,6 @@
             }
 
             this.LogDebug("AddGuardInstructionsIntoDisposeMethods method executed successfully.");
-        }
-
-        private static IEnumerable<Instruction> GetSetIsDisposedInstructions(ILProcessor ilProcessor,
-                                                                             FieldReference disposeFieldDefinition)
-        {
-            yield return ilProcessor.Create(OpCodes.Ldarg_0);
-            yield return ilProcessor.Create(OpCodes.Ldc_I4_1);
-            yield return ilProcessor.Create(OpCodes.Stfld, disposeFieldDefinition);
-        }
-
-        private IEnumerable<Instruction> GetGuardInstructions(ILProcessor ilProcessor,
-                                                              MemberReference memberReference,
-                                                              FieldReference disposeFieldDefinition)
-        {
-            var normalWay = ilProcessor.Body.Instructions.FirstOrDefault() ?? ilProcessor.Create(OpCodes.Ret);
-
-            yield return ilProcessor.Create(OpCodes.Ldarg_0);
-            yield return ilProcessor.Create(OpCodes.Ldfld, disposeFieldDefinition);
-            yield return ilProcessor.Create(OpCodes.Brfalse_S, normalWay);
-
-            yield return ilProcessor.Create(OpCodes.Ldstr, memberReference.Name);
-            yield return ilProcessor.Create(OpCodes.Newobj, this.objectDisposedExceptionReference);
-            yield return ilProcessor.Create(OpCodes.Throw);
         }
     }
 }
