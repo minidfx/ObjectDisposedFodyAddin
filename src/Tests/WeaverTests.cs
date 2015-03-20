@@ -128,6 +128,39 @@ namespace Tests
             }
         }
 
+        public abstract class WithDisposableWithoutGuardClass : WeaverTests
+        {
+            protected override dynamic GetInstance()
+            {
+                return this.CreateInstance("AssemblyToProcess.DisposableWithoutGuard");
+            }
+
+            [Test]
+            public void HasNotIsDisposedField()
+            {
+                var isDisposedField = this.Instance.GetType().GetField("isDisposed", BindingFlags.NonPublic | BindingFlags.Instance);
+                Assert.IsNull(isDisposedField);
+            }
+
+            public sealed class WithCallToDispose : WithDisposableWithoutGuardClass
+            {
+                [SetUp]
+                public override void SetUp()
+                {
+                    base.SetUp();
+
+                    this.Instance.Dispose();
+                }
+
+                [Test]
+                public void CallSayMeHelloWorld()
+                {
+                    var result = this.Instance.SayMeHelloWorld();
+                    Assert.AreEqual("Hello World!", result);
+                }
+            }
+        }
+
         /// <summary>
         ///     Contains unit tests for the <see cref="Disposable" /> class.
         /// </summary>

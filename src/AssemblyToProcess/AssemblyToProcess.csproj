@@ -41,8 +41,15 @@
   <ItemGroup>
     <Compile Include="AsyncDisposable.cs" />
     <Compile Include="Disposable.cs" />
+    <Compile Include="DisposableWithoutGuard.cs" />
     <Compile Include="IAsyncDisposable.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\ObjectDisposedFodyAddin\ObjectDisposedFodyAddin.csproj">
+      <Project>{3365A790-2D6F-439A-A22D-25341B54618F}</Project>
+      <Name>ObjectDisposedFodyAddin</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
