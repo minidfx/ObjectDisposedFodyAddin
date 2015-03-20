@@ -10,10 +10,19 @@
 
     public class ModuleWeaver
     {
+        /// <summary>
+        ///     The constructor reference with string as argument of the <see cref="ObjectDisposedException" /> class.
+        /// </summary>
         private MethodReference objectDisposedExceptionReference;
 
+        /// <summary>
+        ///     Filtered <see cref="Type" />s found in the <see cref="System.Reflection.Assembly" />.
+        /// </summary>
         private Lazy<IEnumerable<TypeDefinition>> types;
 
+        /// <summary>
+        ///     System <see cref="Type" />s loaded from the mscorlib.
+        /// </summary>
         private TypeSystem typeSystem;
 
         /// <summary>
@@ -21,9 +30,9 @@
         /// </summary>
         public ModuleWeaver()
         {
-            this.LogDebug = Console.WriteLine;
-            this.LogInfo = Console.WriteLine;
-            this.LogWarning = Console.WriteLine;
+            this.LogDebug = s => { };
+            this.LogInfo = s => { };
+            this.LogWarning = s => { };
         }
 
         /// <summary>
@@ -61,7 +70,7 @@
         /// </summary>
         public void Execute()
         {
-            this.LogDebug("Entry into ObjectDisposedFodyAddin execute method.");
+            this.LogDebug("Entry into ObjectDisposedFodyAddin Execute method.");
 
             var msCoreLibDefinition = this.ModuleDefinition.AssemblyResolver.Resolve("mscorlib");
             var msCoreTypes = msCoreLibDefinition.MainModule.Types;
@@ -82,11 +91,13 @@
             this.AddSetToDisposedIntructionsIntoDisposeMethods();
             this.AddGuardInstructionsIntoDisposeMethods();
 
-            this.LogDebug("ObjectDisposedFodyAddin executed successfully.");
+            this.LogDebug("Execute method executed successfully.");
         }
 
         private void AddSetToDisposedIntructionsIntoDisposeMethods()
         {
+            this.LogDebug("Entry into ObjectDisposedFodyAddin AddSetToDisposedIntructionsIntoDisposeMethods method");
+
             foreach (var type in this.types.Value)
             {
                 var methods = type.Methods
@@ -110,6 +121,8 @@
                     method.Body.OptimizeMacros();
                 }
             }
+
+            this.LogDebug("AddSetToDisposedIntructionsIntoDisposeMethods method executed successfully.");
         }
 
         /// <summary>
@@ -130,6 +143,8 @@
 
         private void AddIsDisposedPrivateMember()
         {
+            this.LogDebug("Entry into ObjectDisposedFodyAddin AddIsDisposedPrivateMember method");
+
             // ReSharper disable once LoopCanBePartlyConvertedToQuery
             foreach (var type in this.types.Value)
             {
@@ -138,6 +153,8 @@
                     type.Fields.Add(new FieldDefinition("isDisposed", FieldAttributes.Private, this.typeSystem.Boolean));
                 }
             }
+
+            this.LogDebug("AddIsDisposedPrivateMember method executed successfully.");
         }
 
         private static bool MustSkipDisposeCheck(IEnumerable<CustomAttribute> customAttributes)
@@ -152,6 +169,8 @@
 
         private void AddGuardInstructionsIntoDisposeMethods()
         {
+            this.LogDebug("Entry into ObjectDisposedFodyAddin AddGuardInstructionsIntoDisposeMethods method");
+
             // ReSharper disable once LoopCanBePartlyConvertedToQuery
             foreach (var type in this.types.Value)
             {
@@ -177,6 +196,8 @@
                     method.Body.OptimizeMacros();
                 }
             }
+
+            this.LogDebug("AddGuardInstructionsIntoDisposeMethods method executed successfully.");
         }
 
         private static IEnumerable<Instruction> GetSetIsDisposedInstructions(ILProcessor ilProcessor,

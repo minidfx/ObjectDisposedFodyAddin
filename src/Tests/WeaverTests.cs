@@ -1,4 +1,7 @@
-﻿namespace Tests
+﻿
+#pragma warning disable 1584,1711,1572,1581,1580
+
+namespace Tests
 {
     using System;
     using System.IO;
@@ -33,7 +36,7 @@
 #if DEBUG
                 var assemblyPath = Path.Combine(directoryName, @"bin\Debug\AssemblyToProcess.dll");
 #else
-            var assemblyPath = Path.Combine(directoryName, @"bin\Release\AssemblyToProcess.dll");
+                var assemblyPath = Path.Combine(directoryName, @"bin\Release\AssemblyToProcess.dll");
 #endif
 
                 var newAssemblyPath = assemblyPath.Replace(".dll", ".modified.dll");
