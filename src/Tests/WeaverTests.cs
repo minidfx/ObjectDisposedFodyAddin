@@ -76,6 +76,48 @@ namespace Tests
             return Activator.CreateInstance(newAssembly.GetType(className, true));
         }
 
+        public abstract class WithBothInterfaces : WeaverTests
+        {
+            protected override dynamic GetInstance()
+            {
+                return this.CreateInstance("AssemblyToProcess.DisposableWithBothInterfaces");
+            }
+        }
+
+        public abstract class WithNoDirectInrterfaceDisposable : WeaverTests
+        {
+            protected override dynamic GetInstance()
+            {
+                return this.CreateInstance("AssemblyToProcess.DisposableWithNoDirectInterface");
+            }
+
+            [Test]
+            public void HasIsDisposedField()
+            {
+                var isDisposedField = this.Instance.GetType().GetField("isDisposed", BindingFlags.NonPublic | BindingFlags.Instance);
+                Assert.IsNotNull(isDisposedField);
+            }
+
+            public sealed class WithCallToDispose : WithNoDirectInrterfaceDisposable
+            {
+                [SetUp]
+                public override void SetUp()
+                {
+                    base.SetUp();
+
+                    this.Instance.Dispose();
+                }
+
+                [Test]
+                [ExpectedException(typeof(ObjectDisposedException))]
+                public void CallSayMeHelloWorld()
+                {
+                    var result = this.Instance.SayMeHelloWorld();
+                    Assert.AreEqual("Hello World!", result);
+                }
+            }
+        }
+
         /// <summary>
         ///     Contains unit tests for the <see cref="AsyncDisposable" /> class.
         /// </summary>

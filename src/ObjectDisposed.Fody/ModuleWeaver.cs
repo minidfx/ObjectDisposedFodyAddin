@@ -78,19 +78,34 @@
             this.types = new Lazy<IEnumerable<TypeDefinition>>(() => this.ModuleDefinition.GetTypes().Where(x => x.IsClass &&
                                                                                                                  !x.IsAbstract &&
                                                                                                                  !x.IsInterface &&
-                                                                                                                 x.Interfaces.Any(i => i.Name == "IDisposable" || i.Name == "IAsyncDisposable") &&
+                                                                                                                 x.Interfaces.Any(i => i.FullName == "System.IDisposable" || i.Name == "IAsyncDisposable") &&
                                                                                                                  !x.IsGeneratedCode() &&
-                                                                                                                 !x.SkipDisposeGuard()));
+                                                                                                                 !x.SkipDisposeGuard() &&
+                                                                                                                 x.HasDisposeMethod()));
             var objectDisposedExceptionConstructor = msCoreTypes.First(x => x.Name == "ObjectDisposedException")
                                                                 .Methods.First(x => x.Name == ".ctor" &&
                                                                                     x.Parameters.Any(p => p.ParameterType.Name == "String"));
             this.objectDisposedExceptionReference = this.ModuleDefinition.Import(objectDisposedExceptionConstructor);
+
+            this.CheckInterfaces();
 
             this.AddIsDisposedPrivateMember();
             this.AddSetToDisposedIntructionsIntoDisposeMethods();
             this.AddGuardInstructionsIntoDisposeMethods();
 
             this.LogDebug("Execute method executed successfully.");
+        }
+
+        private void CheckInterfaces()
+        {
+            // ReSharper disable once LoopCanBePartlyConvertedToQuery
+            foreach (var typeDefinition in this.types.Value)
+            {
+                if (typeDefinition.Interfaces.Any(x => x.FullName == "System.IDisposable" && x.Name == "IAsyncDisposable"))
+                {
+                    throw new WeavinException(string.Format("The type {0} cannot have both interface {1} and {2}", typeDefinition.Name, "IDisposable", "IAsyncDisposable"));
+                }
+            }
         }
 
         private void AddSetToDisposedIntructionsIntoDisposeMethods()

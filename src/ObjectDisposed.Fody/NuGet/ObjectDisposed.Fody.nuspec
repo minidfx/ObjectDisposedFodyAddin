@@ -1,0 +1,20 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2011/10/nuspec.xsd">
+    <metadata>
+        <id>ObjectDisposed.Fody</id>
+        <version>0.1.0-alpha</version>
+        <title>ObjectDisposed.Fody</title>
+        <authors>Burgy Benjamin</authors>
+        <owners>Burgy Benjamin</owners>
+        <licenseUrl>http://www.opensource.org/licenses/mit-license.php</licenseUrl>
+        <requireLicenseAcceptance>false</requireLicenseAcceptance>
+        <developmentDependency>true</developmentDependency>
+        <description>Check whether an object  is already disposed. Available for any object, which implements IDisposable or the IAsyncDisposable interface.</description>
+        <summary />
+        <language>en-US</language>
+        <tags>fody, cecil, mono, disposable, idisposable, iasyncdisposable, async</tags>
+        <dependencies>
+            <dependency id="Fody" />
+        </dependencies>
+    </metadata>
+</package>
