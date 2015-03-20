@@ -4,6 +4,14 @@
 
     public class Disposable : IDisposable
     {
+        /// <summary>
+        ///     Initializes a new instance of the <see cref="T:System.Object" /> class.
+        /// </summary>
+        public Disposable()
+        {
+            this.APublicText = "Hello World!";
+        }
+
         public string APublicText { get; set; }
 
         protected string AProtectedText { get; set; }
