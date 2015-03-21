@@ -3,6 +3,8 @@
     using System;
     using System.Threading.Tasks;
 
+    using InvalidAssemblyToProcess;
+
     public class DisposableWithBothInterfaces : IDisposable,
                                                 IAsyncDisposable
     {

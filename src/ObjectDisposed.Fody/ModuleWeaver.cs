@@ -101,7 +101,7 @@
             // ReSharper disable once LoopCanBePartlyConvertedToQuery
             foreach (var typeDefinition in this.types.Value)
             {
-                if (typeDefinition.Interfaces.Any(x => x.FullName == "System.IDisposable" && x.Name == "IAsyncDisposable"))
+                if (typeDefinition.Interfaces.Any(x => x.FullName == "System.IDisposable") && typeDefinition.Interfaces.Any(x => x.Name == "IAsyncDisposable"))
                 {
                     throw new WeavinException(string.Format("The type {0} cannot have both interface {1} and {2}", typeDefinition.Name, "IDisposable", "IAsyncDisposable"));
                 }
