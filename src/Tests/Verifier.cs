@@ -29,11 +29,12 @@
                 return string.Empty;
             }
 
-            var processStartInfo = new ProcessStartInfo(string.Format(@"{0} ""{1}""", exePath, assemblyPath))
+            var processStartInfo = new ProcessStartInfo(exePath)
                                        {
                                            RedirectStandardOutput = true,
                                            UseShellExecute = false,
-                                           CreateNoWindow = true
+                                           CreateNoWindow = true,
+                                           Arguments = string.Format(@"""{0}""", assemblyPath)
                                        };
             var process = Process.Start(processStartInfo);
             if (process == null)
