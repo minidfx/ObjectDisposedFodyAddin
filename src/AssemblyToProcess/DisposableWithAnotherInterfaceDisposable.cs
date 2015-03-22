@@ -1,11 +1,6 @@
 ﻿namespace AssemblyToProcess
 {
-    using System;
-
-    using ObjectDisposedFodyAddin;
-
-    [SkipDisposeGuard]
-    public class DisposableWithoutGuard : IDisposable
+    public class DisposableWithAnotherInterfaceDisposable : IAnInterface
     {
         public void Dispose()
         {

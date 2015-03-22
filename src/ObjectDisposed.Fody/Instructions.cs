@@ -65,5 +65,32 @@
             yield return ilProcessor.Create(OpCodes.Newobj, objectDisposedExceptionReference);
             yield return ilProcessor.Create(OpCodes.Throw);
         }
+
+        /// <summary>
+        ///     Returns instructions for calling the base method.
+        /// </summary>
+        /// <param name="ilProcessor">
+        ///     Service for managing instructions of a method.
+        /// </param>
+        /// <param name="typeDefinition">
+        ///     The definition type containing the new dispose method.
+        /// </param>
+        /// <param name="newDisposeMethodDefinition">
+        ///     The definition method in which we will inject instructions.
+        /// </param>
+        /// <returns>
+        ///     A collection of <see cref="Instruction" />.
+        /// </returns>
+        public static IEnumerable<Instruction> GetDefaultOverrideMethodInstructions(ILProcessor ilProcessor,
+                                                                                    TypeDefinition typeDefinition,
+                                                                                    MethodDefinition newDisposeMethodDefinition)
+        {
+            var baseMethodDefinition = typeDefinition.GetMethodDefinition(x => x.Name == newDisposeMethodDefinition.Name);
+            var baseMethodReference = baseMethodDefinition.Resolve();
+
+            yield return ilProcessor.Create(OpCodes.Ldarg_0);
+            yield return ilProcessor.Create(OpCodes.Call, baseMethodReference);
+            yield return ilProcessor.Create(OpCodes.Ret);
+        }
     }
 }

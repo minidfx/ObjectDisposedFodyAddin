@@ -81,7 +81,8 @@
       <DesignTime>True</DesignTime>
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
-    <Compile Include="WeavinException.cs" />
+    <Compile Include="WeavingException.cs" />
+    <Compile Include="WeavingErrorCodes.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />

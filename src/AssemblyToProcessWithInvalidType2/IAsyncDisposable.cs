@@ -1,4 +1,4 @@
-﻿namespace InvalidAssemblyToProcess
+﻿namespace AssemblyToProcessWithInvalidType2
 {
     using System.Threading.Tasks;
 

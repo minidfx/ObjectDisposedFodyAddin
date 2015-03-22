@@ -7,12 +7,17 @@
     using Mono.Cecil;
     using Mono.Cecil.Rocks;
 
+    /// <summary>
+    ///     The module containing the logic for injecting instructions to check whether an object is already disposed.
+    /// </summary>
     public sealed class ModuleWeaver
     {
         /// <summary>
         ///     The constructor reference with string as argument of the <see cref="ObjectDisposedException" /> class.
         /// </summary>
         private MethodReference objectDisposedExceptionReference;
+
+        private TypeReference taskTypeReference;
 
         /// <summary>
         ///     Filtered <see cref="Type" />s found in the <see cref="System.Reflection.Assembly" />.
@@ -75,20 +80,27 @@
             var msCoreTypes = msCoreLibDefinition.MainModule.Types;
 
             this.typeSystem = this.ModuleDefinition.TypeSystem;
-            this.types = new Lazy<IEnumerable<TypeDefinition>>(() => this.ModuleDefinition.GetTypes().Where(x => x.IsClass &&
-                                                                                                                 !x.IsAbstract &&
-                                                                                                                 !x.IsInterface &&
-                                                                                                                 x.Interfaces.Any(i => i.FullName == "System.IDisposable" || i.Name == "IAsyncDisposable") &&
-                                                                                                                 !x.IsGeneratedCode() &&
-                                                                                                                 !x.SkipDisposeGuard() &&
-                                                                                                                 x.HasDisposeMethod()));
-            var objectDisposedExceptionConstructor = msCoreTypes.First(x => x.Name == "ObjectDisposedException")
-                                                                .Methods.First(x => x.Name == ".ctor" &&
-                                                                                    x.Parameters.Any(p => p.ParameterType.Name == "String"));
+            this.types = new Lazy<IEnumerable<TypeDefinition>>(() => this.ModuleDefinition.Types.Where(x => x.IsClass &&
+                                                                                                            !x.IsAbstract &&
+                                                                                                            !x.IsInterface &&
+                                                                                                            x.HasDisposeInterface() &&
+                                                                                                            !x.IsGeneratedCode() &&
+                                                                                                            !x.SkipDisposeGuard()));
+
+            this.CheckPreconditions();
+
+            this.taskTypeReference = this.ModuleDefinition.GetTypeReferences().Single(x => x.FullName == "System.Threading.Tasks.Task");
+            var objectDisposedExceptionConstructor = msCoreTypes.Single(x => x.FullName == "System.ObjectDisposedException")
+                                                                .Methods.Single(x => x.Name == ".ctor" &&
+                                                                                     x.Parameters.Count() == 1 &&
+                                                                                     x.Parameters.All(p => p.ParameterType.FullName == "System.String"));
             this.objectDisposedExceptionReference = this.ModuleDefinition.Import(objectDisposedExceptionConstructor);
 
-            this.CheckInterfaces();
+            var staticTaskFromResult = msCoreTypes.Single(x => x.FullName == "System.Threading.Tasks.Task")
+                                                  .Methods.Single(m => m.IsStatic && m.Name == "FromResult");
+            this.ModuleDefinition.Import(staticTaskFromResult);
 
+            this.CreateDisposeMethodIfNotExists();
             this.AddIsDisposedPrivateMember();
             this.AddSetToDisposedIntructionsIntoDisposeMethods();
             this.AddGuardInstructionsIntoDisposeMethods();
@@ -96,15 +108,51 @@
             this.LogDebug("Execute method executed successfully.");
         }
 
-        private void CheckInterfaces()
+        /// <summary>
+        ///     Creates the disposable method for any types that inherit another type that implements a disposable interface
+        ///     for injecting the instructions to set isDisposed to true when it is called.
+        /// </summary>
+        private void CreateDisposeMethodIfNotExists()
+        {
+            var typeWithoutDisposeMethod = this.types.Value.Where(x => x.HasIDisposableInterface() && x.Methods.All(m => m.Name != "Dispose"));
+            var typeWithoutDisposeAsyncMethod = this.types.Value.Where(x => x.HasIAsyncDisposableInterface() && x.Methods.All(m => m.Name != "DisposeAsync"));
+
+            foreach (var typeDefinition in typeWithoutDisposeMethod)
+            {
+                typeDefinition.CreateOverrideMethod("Dispose", this.typeSystem.Void);
+            }
+
+            foreach (var typeDefinition in typeWithoutDisposeAsyncMethod)
+            {
+                typeDefinition.CreateOverrideMethod("DisposeAsync", this.taskTypeReference);
+            }
+        }
+
+        private void CheckPreconditions()
         {
             // ReSharper disable once LoopCanBePartlyConvertedToQuery
             foreach (var typeDefinition in this.types.Value)
             {
                 if (typeDefinition.Interfaces.Any(x => x.FullName == "System.IDisposable") && typeDefinition.Interfaces.Any(x => x.Name == "IAsyncDisposable"))
                 {
-                    throw new WeavinException(string.Format("The type {0} cannot have both interface {1} and {2}", typeDefinition.Name, "IDisposable", "IAsyncDisposable"));
+                    throw new WeavingException(string.Format("The type {0} cannot have both interface {1} and {2}", typeDefinition.Name, "IDisposable", "IAsyncDisposable"),
+                                               WeavingErrorCodes.ContainsBothInterface);
                 }
+
+                var methodDefinition = typeDefinition.GetMethodDefinition(m => m.Name == "Dispose" || m.Name == "DisposeAsync");
+                if (typeDefinition.IsClass && typeDefinition.IsAbstract && methodDefinition.IsFinal)
+                {
+                    // How to create an override method : http://stackoverflow.com/a/8103611
+                    throw new WeavingException("Cannot found the base method for creating the override, make sure that the virtual keyword is present to one of a disposable method in any base classes.", WeavingErrorCodes.MustHaveVirtualKeyword);
+                }
+            }
+
+            TypeDefinition typeNotUseable;
+            if ((typeNotUseable = this.types.Value.FirstOrDefault(t => t.Fields.Any(f => f.Name == "isDisposed" &&
+                                                                                         (f.FieldType.MetadataType != MetadataType.Boolean || f.Attributes != FieldAttributes.Private)))) != null)
+            {
+                throw new WeavingException(string.Format("The type {0} contains already a member 'isDisposed' not useable.", typeNotUseable.Name),
+                                           WeavingErrorCodes.NotUseable);
             }
         }
 
@@ -127,10 +175,7 @@
                     var firstInstruction = method.Body.Instructions.FirstOrDefault();
 
                     var newInstructions = Instructions.GetSetIsDisposedInstructions(ilProcessor, disposeField);
-                    foreach (var instruction in newInstructions)
-                    {
-                        ilProcessor.InsertBefore(firstInstruction, instruction);
-                    }
+                    ilProcessor.InsertBeforeRange(firstInstruction, newInstructions);
 
                     method.Body.OptimizeMacros();
                 }
@@ -195,10 +240,7 @@
                                                                             type,
                                                                             disposeField,
                                                                             this.objectDisposedExceptionReference);
-                    foreach (var instruction in newInstructions)
-                    {
-                        ilProcessor.InsertBefore(firstInstruction, instruction);
-                    }
+                    ilProcessor.InsertBeforeRange(firstInstruction, newInstructions);
 
                     method.Body.OptimizeMacros();
                 }

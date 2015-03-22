@@ -72,10 +72,36 @@ namespace Tests
         public sealed class WithBothInterfaces : WeaverTests
         {
             [Test]
-            [ExpectedException(typeof(WeavinException))]
             public void LoadAssemblyWithBothInterfaces()
             {
-                this.TryToLoadAssembly(@"..\..\..\InvalidAssemblyToProcess\InvalidAssemblyToProcess.csproj");
+                var exception = Assert.Throws<WeavingException>(() => { this.TryToLoadAssembly(@"..\..\..\AssemblyToProcessWithInvalidType2\AssemblyToProcessWithInvalidType2.csproj"); });
+                Assert.AreEqual(WeavingErrorCodes.ContainsBothInterface, exception.ErrorCode);
+            }
+        }
+
+        /// <summary>
+        ///     Try to load an assembly, which contains type with the interface IDisposable and IAsyncDisposable.
+        /// </summary>
+        public sealed class WithDisposableWithIsDisposedMember : WeaverTests
+        {
+            [Test]
+            public void LoadAssemblyWithBothInterfaces()
+            {
+                var exception = Assert.Throws<WeavingException>(() => { this.TryToLoadAssembly(@"..\..\..\AssemblyToProcessWithInvalidType\AssemblyToProcessWithInvalidType.csproj"); });
+                Assert.AreEqual(WeavingErrorCodes.NotUseable, exception.ErrorCode);
+            }
+        }
+
+        /// <summary>
+        ///     Try to load an assembly, which contains type with the interface IDisposable and IAsyncDisposable.
+        /// </summary>
+        public sealed class WithDisposableWithoutKeywordVirtualOnBaseClasses : WeaverTests
+        {
+            [Test]
+            public void LoadAssemblyWithBothInterfaces()
+            {
+                var exception = Assert.Throws<WeavingException>(() => { this.TryToLoadAssembly(@"..\..\..\AssemblyToProcessWithInvalidType3\AssemblyToProcessWithInvalidType3.csproj"); });
+                Assert.AreEqual(WeavingErrorCodes.MustHaveVirtualKeyword, exception.ErrorCode);
             }
         }
 
@@ -98,11 +124,11 @@ namespace Tests
                 this.TryToLoadAssembly(@"..\..\..\AssemblyToProcess\AssemblyToProcess.csproj");
             }
 
-            public abstract class WithNoDirectInrterfaceDisposable : WithValidAssembly
+            public abstract class WithDisposableChild : WithValidAssembly
             {
                 protected override dynamic GetInstance()
                 {
-                    return this.CreateInstance("AssemblyToProcess.DisposableWithNoDirectInterface");
+                    return this.CreateInstance("AssemblyToProcess.DisposableChild");
                 }
 
                 [Test]
@@ -112,7 +138,75 @@ namespace Tests
                     Assert.IsNotNull(isDisposedField);
                 }
 
-                public sealed class WithCallToDispose : WithNoDirectInrterfaceDisposable
+                public sealed class WithCallToDispose : WithDisposableChild
+                {
+                    [SetUp]
+                    public override void SetUp()
+                    {
+                        base.SetUp();
+
+                        this.Instance.Dispose();
+                    }
+
+                    [Test]
+                    [ExpectedException(typeof(ObjectDisposedException))]
+                    public void CallSayMeHelloWorld()
+                    {
+                        var result = this.Instance.SayMeHelloWorld();
+                        Assert.AreEqual("Hello World!", result);
+                    }
+                }
+            }
+
+            public abstract class WithAsyncDisposableChild : WithValidAssembly
+            {
+                protected override dynamic GetInstance()
+                {
+                    return this.CreateInstance("AssemblyToProcess.AsyncDisposableChild");
+                }
+
+                [Test]
+                public void HasIsDisposedField()
+                {
+                    var isDisposedField = this.Instance.GetType().GetField("isDisposed", BindingFlags.NonPublic | BindingFlags.Instance);
+                    Assert.IsNotNull(isDisposedField);
+                }
+
+                public sealed class WithCallToDispose : WithAsyncDisposableChild
+                {
+                    [SetUp]
+                    public override void SetUp()
+                    {
+                        base.SetUp();
+
+                        this.Instance.DisposeAsync().Wait();
+                    }
+
+                    [Test]
+                    [ExpectedException(typeof(ObjectDisposedException))]
+                    public void CallSayMeHelloWorld()
+                    {
+                        var result = this.Instance.SayMeHelloWorld();
+                        Assert.AreEqual("Hello World!", result);
+                    }
+                }
+            }
+
+            public abstract class WithAnotherInterfaceDisposable : WithValidAssembly
+            {
+                protected override dynamic GetInstance()
+                {
+                    return this.CreateInstance("AssemblyToProcess.DisposableWithAnotherInterfaceDisposable");
+                }
+
+                [Test]
+                public void HasIsDisposedField()
+                {
+                    var isDisposedField = this.Instance.GetType().GetField("isDisposed", BindingFlags.NonPublic | BindingFlags.Instance);
+                    Assert.IsNotNull(isDisposedField);
+                }
+
+                public sealed class WithCallToDispose : WithAnotherInterfaceDisposable
                 {
                     [SetUp]
                     public override void SetUp()

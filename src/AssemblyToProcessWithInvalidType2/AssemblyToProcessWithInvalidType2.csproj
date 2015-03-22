@@ -7,8 +7,8 @@
     <ProjectGuid>{C6D6BFD1-AF2D-4776-BF0C-36621B38AC03}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>InvalidAssemblyToProcess</RootNamespace>
-    <AssemblyName>InvalidAssemblyToProcess</AssemblyName>
+    <RootNamespace>AssemblyToProcessWithInvalidType2</RootNamespace>
+    <AssemblyName>AssemblyToProcessWithInvalidType2</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
   </PropertyGroup>
