@@ -6,6 +6,7 @@
 
     using Mono.Cecil;
     using Mono.Cecil.Rocks;
+    using Mono.Collections.Generic;
 
     /// <summary>
     ///     The module containing the logic for injecting instructions to check whether an object is already disposed.
@@ -16,8 +17,6 @@
         ///     The constructor reference with string as argument of the <see cref="ObjectDisposedException" /> class.
         /// </summary>
         private MethodReference objectDisposedExceptionReference;
-
-        private TypeReference taskTypeReference;
 
         /// <summary>
         ///     Filtered <see cref="Type" />s found in the <see cref="System.Reflection.Assembly" />.
@@ -87,23 +86,12 @@
                                                                                                             !x.IsGeneratedCode() &&
                                                                                                             !x.SkipDisposeGuard()));
 
-            this.CheckPreconditions();
-
-            this.taskTypeReference = this.ModuleDefinition.GetTypeReferences().Single(x => x.FullName == "System.Threading.Tasks.Task");
-            var objectDisposedExceptionConstructor = msCoreTypes.Single(x => x.FullName == "System.ObjectDisposedException")
-                                                                .Methods.Single(x => x.Name == ".ctor" &&
-                                                                                     x.Parameters.Count() == 1 &&
-                                                                                     x.Parameters.All(p => p.ParameterType.FullName == "System.String"));
-            this.objectDisposedExceptionReference = this.ModuleDefinition.Import(objectDisposedExceptionConstructor);
-
-            var staticTaskFromResult = msCoreTypes.Single(x => x.FullName == "System.Threading.Tasks.Task")
-                                                  .Methods.Single(m => m.IsStatic && m.Name == "FromResult");
-            this.ModuleDefinition.Import(staticTaskFromResult);
+            this.InitializeWeaving(msCoreTypes);
 
             this.CreateDisposeMethodIfNotExists();
             this.AddIsDisposedPrivateMember();
             this.AddSetToDisposedIntructionsIntoDisposeMethods();
-            this.AddGuardInstructionsIntoDisposeMethods();
+            this.AddGuardInstructionsIntoMethods();
 
             this.LogDebug("Execute method executed successfully.");
         }
@@ -114,22 +102,37 @@
         /// </summary>
         private void CreateDisposeMethodIfNotExists()
         {
-            var typeWithoutDisposeMethod = this.types.Value.Where(x => x.HasIDisposableInterface() && x.Methods.All(m => m.Name != "Dispose"));
-            var typeWithoutDisposeAsyncMethod = this.types.Value.Where(x => x.HasIAsyncDisposableInterface() && x.Methods.All(m => m.Name != "DisposeAsync"));
+            var typeWithoutDisposeMethod = this.types.Value.Where(x => x.HasIDisposableInterface() && x.Methods.All(m => m.Name != "Dispose")).ToArray();
+            var typeWithoutDisposeAsyncMethod = this.types.Value.Where(x => x.HasIAsyncDisposableInterface() && x.Methods.All(m => m.Name != "DisposeAsync")).ToArray();
 
             foreach (var typeDefinition in typeWithoutDisposeMethod)
             {
                 typeDefinition.CreateOverrideMethod("Dispose", this.typeSystem.Void);
             }
 
-            foreach (var typeDefinition in typeWithoutDisposeAsyncMethod)
+            if (typeWithoutDisposeAsyncMethod.Any())
             {
-                typeDefinition.CreateOverrideMethod("DisposeAsync", this.taskTypeReference);
+                var taskTypeReference = this.ModuleDefinition.GetTypeReferences().Single(x => x.FullName == "System.Threading.Tasks.Task");
+
+                foreach (var typeDefinition in typeWithoutDisposeAsyncMethod)
+                {
+                    typeDefinition.CreateOverrideMethod("DisposeAsync", taskTypeReference);
+                }
             }
         }
 
-        private void CheckPreconditions()
+        private void InitializeWeaving(Collection<TypeDefinition> msCoreTypes)
         {
+            var objectDisposedExceptionConstructor = msCoreTypes.Single(x => x.FullName == "System.ObjectDisposedException")
+                                                                .Methods.Single(x => x.Name == ".ctor" &&
+                                                                                     x.Parameters.Count() == 1 &&
+                                                                                     x.Parameters.All(p => p.ParameterType.FullName == "System.String"));
+            this.objectDisposedExceptionReference = this.ModuleDefinition.Import(objectDisposedExceptionConstructor);
+
+            var staticTaskFromResult = msCoreTypes.Single(x => x.FullName == "System.Threading.Tasks.Task")
+                                                  .Methods.Single(m => m.IsStatic && m.Name == "FromResult");
+            this.ModuleDefinition.Import(staticTaskFromResult);
+
             // ReSharper disable once LoopCanBePartlyConvertedToQuery
             foreach (var typeDefinition in this.types.Value)
             {
@@ -220,9 +223,9 @@
             this.LogDebug("AddIsDisposedPrivateMember method executed successfully.");
         }
 
-        private void AddGuardInstructionsIntoDisposeMethods()
+        private void AddGuardInstructionsIntoMethods()
         {
-            this.LogDebug("Entry into ObjectDisposedFodyAddin AddGuardInstructionsIntoDisposeMethods method");
+            this.LogDebug("Entry into ObjectDisposedFodyAddin AddGuardInstructionsIntoMethods method");
 
             // ReSharper disable once LoopCanBePartlyConvertedToQuery
             foreach (var type in this.types.Value)
@@ -250,7 +253,7 @@
                 }
             }
 
-            this.LogDebug("AddGuardInstructionsIntoDisposeMethods method executed successfully.");
+            this.LogDebug("AddGuardInstructionsIntoMethods method executed successfully.");
         }
     }
 }
