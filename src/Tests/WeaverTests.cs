@@ -72,7 +72,7 @@ namespace Tests
         public sealed class WithBothInterfaces : WeaverTests
         {
             [Test]
-            public void LoadAssemblyWithBothInterfaces()
+            public void LoadAssembly()
             {
                 var exception = Assert.Throws<WeavingException>(() => { this.TryToLoadAssembly(@"..\..\..\AssemblyToProcessWithInvalidType2\AssemblyToProcessWithInvalidType2.csproj"); });
                 Assert.AreEqual(WeavingErrorCodes.ContainsBothInterface, exception.ErrorCode);
@@ -85,7 +85,7 @@ namespace Tests
         public sealed class WithDisposableWithIsDisposedMember : WeaverTests
         {
             [Test]
-            public void LoadAssemblyWithBothInterfaces()
+            public void LoadAssembly()
             {
                 var exception = Assert.Throws<WeavingException>(() => { this.TryToLoadAssembly(@"..\..\..\AssemblyToProcessWithInvalidType\AssemblyToProcessWithInvalidType.csproj"); });
                 Assert.AreEqual(WeavingErrorCodes.NotUseable, exception.ErrorCode);
@@ -98,7 +98,7 @@ namespace Tests
         public sealed class WithDisposableWithoutKeywordVirtualOnBaseClasses : WeaverTests
         {
             [Test]
-            public void LoadAssemblyWithBothInterfaces()
+            public void LoadAssembly()
             {
                 var exception = Assert.Throws<WeavingException>(() => { this.TryToLoadAssembly(@"..\..\..\AssemblyToProcessWithInvalidType3\AssemblyToProcessWithInvalidType3.csproj"); });
                 Assert.AreEqual(WeavingErrorCodes.MustHaveVirtualKeyword, exception.ErrorCode);

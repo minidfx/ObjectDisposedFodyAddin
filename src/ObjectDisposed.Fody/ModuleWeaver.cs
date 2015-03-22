@@ -139,11 +139,15 @@
                                                WeavingErrorCodes.ContainsBothInterface);
                 }
 
-                var methodDefinition = typeDefinition.GetMethodDefinition(m => m.Name == "Dispose" || m.Name == "DisposeAsync");
-                if (typeDefinition.IsClass && typeDefinition.IsAbstract && methodDefinition.IsFinal)
+                if (!typeDefinition.Methods.Any(x => x.Name == "Dispose" || x.Name == "DisposeAsync"))
                 {
-                    // How to create an override method : http://stackoverflow.com/a/8103611
-                    throw new WeavingException("Cannot found the base method for creating the override, make sure that the virtual keyword is present to one of a disposable method in any base classes.", WeavingErrorCodes.MustHaveVirtualKeyword);
+                    var baseType = typeDefinition.BaseType.Resolve();
+                    var methodDefinition = baseType.GetMethodDefinition(m => (m.Name == "Dispose" || m.Name == "DisposeAsync") && !m.IsFinal);
+                    if (methodDefinition == null)
+                    {
+                        // How to create an override method : http://stackoverflow.com/a/8103611
+                        throw new WeavingException("Cannot found the base method for creating the override, make sure that the virtual keyword is present to one of a disposable method in any base classes.", WeavingErrorCodes.MustHaveVirtualKeyword);
+                    }
                 }
             }
 

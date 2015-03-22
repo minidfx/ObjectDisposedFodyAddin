@@ -1,4 +1,4 @@
-﻿namespace AssemblyToProcessWithInvalidTyp3
+﻿namespace AssemblyToProcessWithInvalidType3
 {
     using System;
 
