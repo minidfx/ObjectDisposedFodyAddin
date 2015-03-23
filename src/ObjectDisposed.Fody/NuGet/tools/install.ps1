@@ -51,6 +51,5 @@ function UnlockWeaversXml($project)
 }
 
 UnlockWeaversXml -project $project
-RemoveForceProjectLevelHack -project $project
 UpdateFodyConfig -package $package -project $project
 Fix-ReferencesCopyLocal -package $package -project $project
