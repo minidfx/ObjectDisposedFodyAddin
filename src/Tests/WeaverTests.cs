@@ -226,6 +226,36 @@ namespace Tests
                 }
             }
 
+            public abstract class WithAsyncDisposableWithAwait : WithValidAssembly
+            {
+                protected override dynamic GetInstance()
+                {
+                    return this.CreateInstance("AssemblyToProcess.AsyncDisposableWithAwait");
+                }
+
+                /// <summary>
+                ///     Unit tests when the AsyncDispose method has been called.
+                /// </summary>
+                public sealed class WithCallToDispose : WithAsyncDisposableClass
+                {
+                    [SetUp]
+                    public override void SetUp()
+                    {
+                        base.SetUp();
+
+                        this.Instance.DisposeAsync().Wait();
+                    }
+
+                    [Test]
+                    [ExpectedException(typeof(ObjectDisposedException))]
+                    public void CallSayMeHelloWorld()
+                    {
+                        var result = this.Instance.SayMeHelloWorld();
+                        Assert.AreEqual("Hello World!", result);
+                    }
+                }
+            }
+
             /// <summary>
             ///     Contains unit tests for the <see cref="AsyncDisposable" /> class.
             /// </summary>

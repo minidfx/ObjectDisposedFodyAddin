@@ -5,6 +5,7 @@
     using System.Linq;
 
     using Mono.Cecil;
+    using Mono.Cecil.Cil;
     using Mono.Cecil.Rocks;
     using Mono.Collections.Generic;
 
@@ -179,10 +180,10 @@
                 foreach (var method in methods)
                 {
                     var ilProcessor = method.Body.GetILProcessor();
-                    var firstInstruction = method.Body.Instructions.FirstOrDefault();
+                    var returnInstruction = method.Body.Instructions.Single(x => x.OpCode.Code == Code.Ret);
 
                     var newInstructions = Instructions.GetSetIsDisposedInstructions(ilProcessor, disposeField);
-                    ilProcessor.InsertBeforeRange(firstInstruction, newInstructions);
+                    ilProcessor.InsertBeforeRange(returnInstruction, newInstructions);
 
                     method.Body.OptimizeMacros();
                 }

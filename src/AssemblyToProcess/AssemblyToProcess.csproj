@@ -40,6 +40,7 @@
     <Compile Include="AsyncDisposable.cs" />
     <Compile Include="AsyncDisposableBase.cs" />
     <Compile Include="AsyncDisposableChild.cs" />
+    <Compile Include="AsyncDisposableWithAwait.cs" />
     <Compile Include="Disposable.cs" />
     <Compile Include="DisposableBase.cs" />
     <Compile Include="DisposableChild.cs" />
