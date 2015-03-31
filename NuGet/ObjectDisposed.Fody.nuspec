@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
+<package xmlns="http://schemas.microsoft.com/packaging/2011/10/nuspec.xsd">
     <metadata>
         <id>ObjectDisposed.Fody</id>
         <version>0.1.1-alpha</version>
@@ -8,7 +8,6 @@
         <owners>Burgy Benjamin</owners>
         <licenseUrl>http://www.opensource.org/licenses/mit-license.php</licenseUrl>
         <requireLicenseAcceptance>false</requireLicenseAcceptance>
-        <developmentDependency>true</developmentDependency>
         <description>Check whether an object  is already disposed. Available for any object, which implements IDisposable or the IAsyncDisposable interface.</description>
         <summary />
         <language>en-US</language>
@@ -17,4 +16,11 @@
             <dependency id="Fody" />
         </dependencies>
     </metadata>
+    <files>
+        <file src="..\src\ReferenceAssembly\bin\Release\ObjectDisposed.dll" target="lib\portable-net45+sl4\ObjectDisposed.dll" />
+        <file src="tools\install.ps1" target="tools\install.ps1" />
+        <file src="tools\uninstall.ps1" target="tools\uninstall.ps1" />
+        <file src="..\src\ObjectDisposed.Fody\bin\Release\ObjectDisposed.Fody.dll" target="ObjectDisposed.Fody.dll" />
+        <file src="..\src\ObjectDisposed.Fody\bin\Release\ObjectDisposed.Fody.XML" target="ObjectDisposed.Fody.XML" />
+    </files>
 </package>
