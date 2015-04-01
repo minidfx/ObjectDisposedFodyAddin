@@ -4,5 +4,5 @@ install:
   - nuget restore ObjectDisposedFodyAddin.sln
   - nuget install NUnit.Runners -Version 2.6.4 -OutputDirectory testrunner
 script:
-  - xbuild /p:Configuration=Release ObjectDisposedFodyAddin.sln
+  - xbuild /p:Configuration=Release /p:DefineConstants="LINUX" ObjectDisposedFodyAddin.sln
   - mono ./testrunner/NUnit.Runners.2.6.4/tools/nunit-console.exe ./src/Tests/bin/Release/Tests.dll

@@ -54,8 +54,10 @@ namespace Tests
             weavingTask.Execute();
             moduleDefinition.Write(newAssemblyPath);
 
+#if !LINUX
             // Verify that the assembly is correctly before running tests.
             Verifier.Verify(assemblyPath, newAssemblyPath);
+#endif
 
             newAssembly = Assembly.LoadFile(newAssemblyPath);
         }
