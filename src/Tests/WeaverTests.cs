@@ -22,43 +22,42 @@ namespace Tests
 
         protected void TryToLoadAssembly(string relativeProjectPath)
         {
-            if (newAssembly == null)
-            {
-                var projectPath = Path.GetFullPath(Path.Combine(Environment.CurrentDirectory, relativeProjectPath));
-                var projectName = Path.GetFileNameWithoutExtension(relativeProjectPath);
+            if (newAssembly != null) return;
 
-                var directoryName = Path.GetDirectoryName(projectPath);
-                if (directoryName == null)
-                {
-                    throw new IOException("Cannot determines the project directory.");
-                }
+            var projectPath = Path.GetFullPath(Path.Combine(Environment.CurrentDirectory, relativeProjectPath));
+            var projectName = Path.GetFileNameWithoutExtension(relativeProjectPath);
+
+            var directoryName = Path.GetDirectoryName(projectPath);
+            if (directoryName == null)
+            {
+                throw new IOException("Cannot determines the project directory.");
+            }
 
 #if DEBUG
-                var assemblyPath = Path.Combine(directoryName, string.Format(@"bin\Debug\{0}.dll", projectName));
+            var assemblyPath = Path.Combine(directoryName, string.Format(@"bin{0}Debug{0}{1}.dll", Path.DirectorySeparatorChar, projectName));
 #else
-                var assemblyPath = Path.Combine(directoryName, string.Format(@"bin\Release\{0}.dll", projectName));
+            var assemblyPath = Path.Combine(directoryName, string.Format(@"bin{0}Release{0}{1}.dll", Path.DirectorySeparatorChar, projectName));
 #endif
 
-                var newAssemblyPath = assemblyPath.Replace(".dll", ".modified.dll");
+            var newAssemblyPath = assemblyPath.Replace(".dll", ".modified.dll");
 
-                if (File.Exists(newAssemblyPath))
-                {
-                    File.Delete(newAssemblyPath);
-                }
-
-                var moduleDefinition = ModuleDefinition.ReadModule(assemblyPath);
-                var weavingTask = new ModuleWeaver
-                                      {
-                                          ModuleDefinition = moduleDefinition
-                                      };
-                weavingTask.Execute();
-                moduleDefinition.Write(newAssemblyPath);
-
-                // Verify that the assembly is correctly before running tests.
-                Verifier.Verify(assemblyPath, newAssemblyPath);
-
-                newAssembly = Assembly.LoadFile(newAssemblyPath);
+            if (File.Exists(newAssemblyPath))
+            {
+                File.Delete(newAssemblyPath);
             }
+
+            var moduleDefinition = ModuleDefinition.ReadModule(assemblyPath);
+            var weavingTask = new ModuleWeaver
+            {
+                ModuleDefinition = moduleDefinition
+            };
+            weavingTask.Execute();
+            moduleDefinition.Write(newAssemblyPath);
+
+            // Verify that the assembly is correctly before running tests.
+            Verifier.Verify(assemblyPath, newAssemblyPath);
+
+            newAssembly = Assembly.LoadFile(newAssemblyPath);
         }
 
         protected dynamic CreateInstance(string className)
@@ -74,7 +73,7 @@ namespace Tests
             [Test]
             public void LoadAssembly()
             {
-                var exception = Assert.Throws<WeavingException>(() => { this.TryToLoadAssembly(@"..\..\..\AssemblyToProcessWithInvalidType2\AssemblyToProcessWithInvalidType2.csproj"); });
+                var exception = Assert.Throws<WeavingException>(() => this.TryToLoadAssembly(string.Format(@"..{0}..{0}..{0}AssemblyToProcessWithInvalidType2{0}AssemblyToProcessWithInvalidType2.csproj", Path.DirectorySeparatorChar)));
                 Assert.AreEqual(WeavingErrorCodes.ContainsBothInterface, exception.ErrorCode);
             }
         }
@@ -87,7 +86,7 @@ namespace Tests
             [Test]
             public void LoadAssembly()
             {
-                var exception = Assert.Throws<WeavingException>(() => { this.TryToLoadAssembly(@"..\..\..\AssemblyToProcessWithInvalidType\AssemblyToProcessWithInvalidType.csproj"); });
+                var exception = Assert.Throws<WeavingException>(() => this.TryToLoadAssembly(string.Format(@"..{0}..{0}..{0}AssemblyToProcessWithInvalidType{0}AssemblyToProcessWithInvalidType.csproj", Path.DirectorySeparatorChar)));
                 Assert.AreEqual(WeavingErrorCodes.NotUseable, exception.ErrorCode);
             }
         }
@@ -100,7 +99,7 @@ namespace Tests
             [Test]
             public void LoadAssembly()
             {
-                var exception = Assert.Throws<WeavingException>(() => { this.TryToLoadAssembly(@"..\..\..\AssemblyToProcessWithInvalidType3\AssemblyToProcessWithInvalidType3.csproj"); });
+                var exception = Assert.Throws<WeavingException>(() => this.TryToLoadAssembly(string.Format(@"..{0}..{0}..{0}AssemblyToProcessWithInvalidType3{0}AssemblyToProcessWithInvalidType3.csproj", Path.DirectorySeparatorChar)));
                 Assert.AreEqual(WeavingErrorCodes.MustHaveVirtualKeyword, exception.ErrorCode);
             }
         }
@@ -121,7 +120,7 @@ namespace Tests
             [TestFixtureSetUp]
             public void FixtureSetUp()
             {
-                this.TryToLoadAssembly(@"..\..\..\AssemblyToProcess\AssemblyToProcess.csproj");
+                this.TryToLoadAssembly(string.Format(@"..{0}..{0}..{0}AssemblyToProcess{0}AssemblyToProcess.csproj", Path.DirectorySeparatorChar));
             }
 
             public abstract class WithDisposableChild : WithValidAssembly
