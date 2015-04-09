@@ -7,7 +7,6 @@
     using Mono.Cecil;
     using Mono.Cecil.Cil;
     using Mono.Cecil.Rocks;
-    using Mono.Collections.Generic;
 
     /// <summary>
     ///     The module containing the logic for injecting instructions to check whether an object is already disposed.
@@ -15,10 +14,18 @@
     public sealed class ModuleWeaver
     {
         /// <summary>
+        ///     Contains <see cref="MethodReference"/>s already resolved.
+        /// </summary>
+        private readonly IDictionary<string, MethodReference> cacheMethodReferences = new Dictionary<string, MethodReference>();
+
+        /// <summary>
         ///     The constructor reference with string as argument of the <see cref="ObjectDisposedException" /> class.
         /// </summary>
         private MethodReference objectDisposedExceptionReference;
 
+        /// <summary>
+        ///     Contains <see cref="TypeReference"/>s available in the module.
+        /// </summary>
         private IEnumerable<TypeReference> typeReferences;
 
         /// <summary>
@@ -77,6 +84,7 @@
         public void Execute()
         {
             this.LogDebug("Entry into ObjectDisposedFodyAddin Execute method.");
+            this.cacheMethodReferences.Clear();
 
             var msCoreLibDefinition = this.ModuleDefinition.AssemblyResolver.Resolve("mscorlib");
             var msCoreTypes = msCoreLibDefinition.MainModule.Types;
@@ -112,7 +120,7 @@
 
             foreach (var typeDefinition in typeWithoutDisposeMethod)
             {
-                typeDefinition.CreateOverrideMethod("Dispose", this.typeSystem.Void);
+                typeDefinition.CreateOverrideMethod("Dispose", this.typeSystem.Void, this.cacheMethodReferences);
             }
 
             if (typeWithoutDisposeAsyncMethod.Any())
@@ -121,22 +129,21 @@
 
                 foreach (var typeDefinition in typeWithoutDisposeAsyncMethod)
                 {
-                    typeDefinition.CreateOverrideMethod("DisposeAsync", taskTypeReference);
+                    typeDefinition.CreateOverrideMethod("DisposeAsync", taskTypeReference, this.cacheMethodReferences);
                 }
             }
         }
 
-        private void InitializeWeaving(Collection<TypeDefinition> msCoreTypes)
+        private void InitializeWeaving(IEnumerable<TypeDefinition> msCoreTypes)
         {
-            var objectDisposedExceptionConstructor = msCoreTypes.Single(x => x.FullName == "System.ObjectDisposedException")
-                                                                .Methods.Single(x => x.Name == ".ctor" &&
-                                                                                     x.Parameters.Count() == 1 &&
-                                                                                     x.Parameters.All(p => p.ParameterType.FullName == "System.String"));
-            this.objectDisposedExceptionReference = this.ModuleDefinition.Import(objectDisposedExceptionConstructor);
-
-            var staticTaskFromResult = msCoreTypes.Single(x => x.FullName == "System.Threading.Tasks.Task")
-                                                  .Methods.Single(m => m.IsStatic && m.Name == "FromResult");
-            this.ModuleDefinition.Import(staticTaskFromResult);
+            if (this.objectDisposedExceptionReference == null)
+            {
+                var objectDisposedExceptionConstructor = msCoreTypes.Single(x => x.FullName == "System.ObjectDisposedException")
+                                                                    .Methods.Single(x => x.Name == ".ctor" &&
+                                                                                         x.Parameters.Count() == 1 &&
+                                                                                         x.Parameters.All(p => p.ParameterType.FullName == "System.String"));
+                this.objectDisposedExceptionReference = this.ModuleDefinition.Import(objectDisposedExceptionConstructor);
+            }
 
             // ReSharper disable once LoopCanBePartlyConvertedToQuery
             foreach (var typeDefinition in this.types.Value)

@@ -26,8 +26,6 @@
     /// </summary>
     public static class CecilExtensions
     {
-        private static readonly IDictionary<string, MethodReference> CacheBaseMethodReferences = new Dictionary<string, MethodReference>();
-
         /// <summary>
         ///     Determines whether the dispose guard doesn't have to be injected into the method.
         /// </summary>
@@ -84,15 +82,19 @@
         /// <param name="returnType">
         ///     The return <see cref="Type" /> of the method.
         /// </param>
+        /// <param name="cacheMethodReferences">
+        ///     The <see cref="IDictionary{TKey,TValue}"/> containing references already resolved.
+        /// </param>
         public static void CreateOverrideMethod(this TypeDefinition typeDefinition,
                                                 string name,
-                                                TypeReference returnType)
+                                                TypeReference returnType,
+                                                IDictionary<string, MethodReference> cacheMethodReferences)
         {
             const MethodAttributes OverrideMethodAttributes = MethodAttributes.Public | MethodAttributes.Virtual | MethodAttributes.ReuseSlot | MethodAttributes.HideBySig;
 
             var newMethod = new MethodDefinition(name, OverrideMethodAttributes, returnType);
             var ilProcessor = newMethod.Body.GetILProcessor();
-            var baseMethodReference = GetBaseMethod(typeDefinition);
+            var baseMethodReference = GetBaseMethod(typeDefinition, cacheMethodReferences);
             // How to create an override method : http://stackoverflow.com/a/8103611
             var instructions = Instructions.GetDefaultOverrideMethodInstructions(ilProcessor, baseMethodReference);
 
@@ -106,10 +108,14 @@
         /// <param name="originalTypeDefinition">
         ///     The <see cref="TypeDefinition"/> that needs the base <see cref="MethodReference"/>.
         /// </param>
+        /// <param name="cacheMethodReferences">
+        ///     The <see cref="IDictionary{TKey,TValue}"/> containing references already resolved.
+        /// </param>
         /// <returns>
         ///     The <see cref="MethodReference"/> that will be injected into the dipose method.
         /// </returns>
-        private static MethodReference GetBaseMethod(TypeDefinition originalTypeDefinition)
+        private static MethodReference GetBaseMethod(TypeDefinition originalTypeDefinition,
+                                                     IDictionary<string, MethodReference> cacheMethodReferences)
         {
             var walkerTypeDefinition = originalTypeDefinition;
             MethodDefinition baseMethod = null;
@@ -117,9 +123,9 @@
             while (baseMethod == null && walkerTypeDefinition.BaseType != null)
             {
                 var baseTypeFullName = walkerTypeDefinition.BaseType.FullName;
-                if (CacheBaseMethodReferences.ContainsKey(baseTypeFullName))
+                if (cacheMethodReferences.ContainsKey(baseTypeFullName))
                 {
-                    return CacheBaseMethodReferences[baseTypeFullName];
+                    return cacheMethodReferences[baseTypeFullName];
                 }
 
                 walkerTypeDefinition = walkerTypeDefinition.BaseType.Resolve();
@@ -135,7 +141,7 @@
             }
 
             var baseMethodReference = originalTypeDefinition.Module.Import(baseMethod);
-            CacheBaseMethodReferences.Add(baseMethod.FullName, baseMethodReference);
+            cacheMethodReferences.Add(walkerTypeDefinition.FullName, baseMethodReference);
 
             return baseMethodReference;
         }
