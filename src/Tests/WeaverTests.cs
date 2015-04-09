@@ -22,7 +22,10 @@ namespace Tests
 
         protected void TryToLoadAssembly(string relativeProjectPath)
         {
-            if (newAssembly != null) return;
+            if (newAssembly != null)
+            {
+                return;
+            }
 
             var projectPath = Path.GetFullPath(Path.Combine(Environment.CurrentDirectory, relativeProjectPath));
             var projectName = Path.GetFileNameWithoutExtension(relativeProjectPath);
@@ -34,9 +37,9 @@ namespace Tests
             }
 
 #if DEBUG
-            var assemblyPath = Path.Combine(directoryName, string.Format(@"bin{0}Debug{0}{1}.dll", Path.DirectorySeparatorChar, projectName));
+            var assemblyPath = Path.Combine(directoryName, Path.Combine("bin", "Debug", string.Format("{0}.dll", projectName)));
 #else
-            var assemblyPath = Path.Combine(directoryName, string.Format(@"bin{0}Release{0}{1}.dll", Path.DirectorySeparatorChar, projectName));
+            var assemblyPath = Path.Combine(directoryName, Path.Combine("bin", "Release", string.Format("{0}.dll", projectName)));
 #endif
 
             var newAssemblyPath = assemblyPath.Replace(".dll", ".modified.dll");
@@ -48,9 +51,9 @@ namespace Tests
 
             var moduleDefinition = ModuleDefinition.ReadModule(assemblyPath);
             var weavingTask = new ModuleWeaver
-            {
-                ModuleDefinition = moduleDefinition
-            };
+                                  {
+                                      ModuleDefinition = moduleDefinition
+                                  };
             weavingTask.Execute();
             moduleDefinition.Write(newAssemblyPath);
 
@@ -75,7 +78,7 @@ namespace Tests
             [Test]
             public void LoadAssembly()
             {
-                var exception = Assert.Throws<WeavingException>(() => this.TryToLoadAssembly(string.Format(@"..{0}..{0}..{0}AssemblyToProcessWithInvalidType2{0}AssemblyToProcessWithInvalidType2.csproj", Path.DirectorySeparatorChar)));
+                var exception = Assert.Throws<WeavingException>(() => this.TryToLoadAssembly(Path.Combine("..", "..", "..", "AssemblyToProcessWithInvalidType2", "AssemblyToProcessWithInvalidType2.csproj")));
                 Assert.AreEqual(WeavingErrorCodes.ContainsBothInterface, exception.ErrorCode);
             }
         }
@@ -88,7 +91,7 @@ namespace Tests
             [Test]
             public void LoadAssembly()
             {
-                var exception = Assert.Throws<WeavingException>(() => this.TryToLoadAssembly(string.Format(@"..{0}..{0}..{0}AssemblyToProcessWithInvalidType{0}AssemblyToProcessWithInvalidType.csproj", Path.DirectorySeparatorChar)));
+                var exception = Assert.Throws<WeavingException>(() => this.TryToLoadAssembly(Path.Combine("..", "..", "..", "AssemblyToProcessWithInvalidType", "AssemblyToProcessWithInvalidType.csproj")));
                 Assert.AreEqual(WeavingErrorCodes.NotUseable, exception.ErrorCode);
             }
         }
@@ -101,7 +104,7 @@ namespace Tests
             [Test]
             public void LoadAssembly()
             {
-                var exception = Assert.Throws<WeavingException>(() => this.TryToLoadAssembly(string.Format(@"..{0}..{0}..{0}AssemblyToProcessWithInvalidType3{0}AssemblyToProcessWithInvalidType3.csproj", Path.DirectorySeparatorChar)));
+                var exception = Assert.Throws<WeavingException>(() => this.TryToLoadAssembly(Path.Combine("..", "..", "..", "AssemblyToProcessWithInvalidType3", "AssemblyToProcessWithInvalidType3.csproj")));
                 Assert.AreEqual(WeavingErrorCodes.MustHaveVirtualKeyword, exception.ErrorCode);
             }
         }
@@ -122,7 +125,7 @@ namespace Tests
             [TestFixtureSetUp]
             public void FixtureSetUp()
             {
-                this.TryToLoadAssembly(string.Format(@"..{0}..{0}..{0}AssemblyToProcess{0}AssemblyToProcess.csproj", Path.DirectorySeparatorChar));
+                this.TryToLoadAssembly(Path.Combine("..", "..", "..", "AssemblyToProcess", "AssemblyToProcess.csproj"));
             }
 
             public abstract class WithDisposableChild : WithValidAssembly
@@ -403,6 +406,7 @@ namespace Tests
                     [ExpectedException(typeof(ObjectDisposedException))]
                     public void AccessToAPublicText()
                     {
+                        // ReSharper disable once UnusedVariable
                         var result = this.Instance.APublicText;
                     }
                 }
