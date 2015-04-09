@@ -6,7 +6,7 @@ using System.Resources;
 
 [assembly: AssemblyProduct("ObjectDisposed.Fody")]
 [assembly: AssemblyCopyright("Copyright © Burgy Benjamin 2015")]
-[assembly: AssemblyVersion("0.2.1.*")]
+[assembly: AssemblyVersion("0.2.2.*")]
 [assembly: NeutralResourcesLanguage("en")]
 
 #if DEBUG
