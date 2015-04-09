@@ -19,6 +19,8 @@
         /// </summary>
         private MethodReference objectDisposedExceptionReference;
 
+        private IEnumerable<TypeReference> typeReferences;
+
         /// <summary>
         ///     Filtered <see cref="Type" />s found in the <see cref="System.Reflection.Assembly" />.
         /// </summary>
@@ -87,6 +89,8 @@
                                                                                                             !x.IsGeneratedCode() &&
                                                                                                             !x.SkipDisposeGuard()));
 
+            this.typeReferences = this.ModuleDefinition.GetTypeReferences();
+
             this.InitializeWeaving(msCoreTypes);
 
             this.CreateDisposeMethodIfNotExists();
@@ -113,7 +117,7 @@
 
             if (typeWithoutDisposeAsyncMethod.Any())
             {
-                var taskTypeReference = this.ModuleDefinition.GetTypeReferences().Single(x => x.FullName == "System.Threading.Tasks.Task");
+                var taskTypeReference = this.typeReferences.Single(x => x.FullName == "System.Threading.Tasks.Task");
 
                 foreach (var typeDefinition in typeWithoutDisposeAsyncMethod)
                 {
@@ -141,17 +145,6 @@
                 {
                     throw new WeavingException(string.Format("The type {0} cannot have both interface {1} and {2}", typeDefinition.Name, "IDisposable", "IAsyncDisposable"),
                                                WeavingErrorCodes.ContainsBothInterface);
-                }
-
-                if (!typeDefinition.Methods.Any(x => x.Name == "Dispose" || x.Name == "DisposeAsync"))
-                {
-                    var baseType = typeDefinition.BaseType.Resolve();
-                    var methodDefinition = baseType.GetMethodDefinition(m => (m.Name == "Dispose" || m.Name == "DisposeAsync") && !m.IsFinal);
-                    if (methodDefinition == null)
-                    {
-                        // How to create an override method : http://stackoverflow.com/a/8103611
-                        throw new WeavingException("Cannot found the base method for creating the override, make sure that the virtual keyword is present to one of a disposable method in any base classes.", WeavingErrorCodes.MustHaveVirtualKeyword);
-                    }
                 }
             }
 

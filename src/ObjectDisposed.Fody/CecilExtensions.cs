@@ -26,6 +26,8 @@
     /// </summary>
     public static class CecilExtensions
     {
+        private static readonly IDictionary<string, MethodReference> CacheBaseMethodReferences = new Dictionary<string, MethodReference>();
+
         /// <summary>
         ///     Determines whether the dispose guard doesn't have to be injected into the method.
         /// </summary>
@@ -90,10 +92,52 @@
 
             var newMethod = new MethodDefinition(name, OverrideMethodAttributes, returnType);
             var ilProcessor = newMethod.Body.GetILProcessor();
-            var instructions = Instructions.GetDefaultOverrideMethodInstructions(ilProcessor, typeDefinition, newMethod);
+            var baseMethodReference = GetBaseMethod(typeDefinition);
+            // How to create an override method : http://stackoverflow.com/a/8103611
+            var instructions = Instructions.GetDefaultOverrideMethodInstructions(ilProcessor, baseMethodReference);
 
             ilProcessor.AppendRange(instructions);
             typeDefinition.Methods.Add(newMethod);
+        }
+
+        /// <summary>
+        ///     Finds and returns the base dispose method.   
+        /// </summary>
+        /// <param name="originalTypeDefinition">
+        ///     The <see cref="TypeDefinition"/> that needs the base <see cref="MethodReference"/>.
+        /// </param>
+        /// <returns>
+        ///     The <see cref="MethodReference"/> that will be injected into the dipose method.
+        /// </returns>
+        private static MethodReference GetBaseMethod(TypeDefinition originalTypeDefinition)
+        {
+            var walkerTypeDefinition = originalTypeDefinition;
+            MethodDefinition baseMethod = null;
+
+            while (baseMethod == null && walkerTypeDefinition.BaseType != null)
+            {
+                var baseTypeFullName = walkerTypeDefinition.BaseType.FullName;
+                if (CacheBaseMethodReferences.ContainsKey(baseTypeFullName))
+                {
+                    return CacheBaseMethodReferences[baseTypeFullName];
+                }
+
+                walkerTypeDefinition = walkerTypeDefinition.BaseType.Resolve();
+                baseMethod = walkerTypeDefinition.Methods
+                                                 .Where(x => x.Name == "Dispose" || x.Name == "DisposeAsync")
+                                                 .SingleOrDefault(x => !x.Attributes.HasFlag(MethodAttributes.Private) &&
+                                                                       !x.Attributes.HasFlag(MethodAttributes.Final));
+            }
+
+            if (baseMethod == null)
+            {
+                throw new WeavingException("Cannot found the base method for creating the override, make sure that the virtual keyword is present to one of a disposable method in any base classes.", WeavingErrorCodes.MustHaveVirtualKeyword);
+            }
+
+            var baseMethodReference = originalTypeDefinition.Module.Import(baseMethod);
+            CacheBaseMethodReferences.Add(baseMethod.FullName, baseMethodReference);
+
+            return baseMethodReference;
         }
 
         /// <summary>
