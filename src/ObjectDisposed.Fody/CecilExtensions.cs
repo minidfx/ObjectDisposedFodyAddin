@@ -85,10 +85,14 @@
         /// <param name="cacheMethodReferences">
         ///     The <see cref="IDictionary{TKey,TValue}"/> containing references already resolved.
         /// </param>
+        /// <param name="compilerAttributeReference">
+        ///     The <see cref="MethodReference"/> of the compiler generated attribute.
+        /// </param>
         public static void CreateOverrideMethod(this TypeDefinition typeDefinition,
                                                 string name,
                                                 TypeReference returnType,
-                                                IDictionary<string, MethodReference> cacheMethodReferences)
+                                                IDictionary<string, MethodReference> cacheMethodReferences,
+                                                MethodReference compilerAttributeReference)
         {
             const MethodAttributes OverrideMethodAttributes = MethodAttributes.Public | MethodAttributes.Virtual | MethodAttributes.ReuseSlot | MethodAttributes.HideBySig;
 
@@ -97,6 +101,8 @@
             var baseMethodReference = GetBaseMethod(typeDefinition, cacheMethodReferences);
             // How to create an override method : http://stackoverflow.com/a/8103611
             var instructions = Instructions.GetDefaultOverrideMethodInstructions(ilProcessor, baseMethodReference);
+
+            newMethod.CustomAttributes.Add(new CustomAttribute(compilerAttributeReference));
 
             ilProcessor.AppendRange(instructions);
             typeDefinition.Methods.Add(newMethod);

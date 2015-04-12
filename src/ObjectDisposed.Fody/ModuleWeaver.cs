@@ -18,6 +18,8 @@
         /// </summary>
         private readonly IDictionary<string, MethodReference> cacheMethodReferences = new Dictionary<string, MethodReference>();
 
+        private MethodReference compilerAttributeReference;
+
         /// <summary>
         ///     The constructor reference with string as argument of the <see cref="ObjectDisposedException" /> class.
         /// </summary>
@@ -120,7 +122,7 @@
 
             foreach (var typeDefinition in typeWithoutDisposeMethod)
             {
-                typeDefinition.CreateOverrideMethod("Dispose", this.typeSystem.Void, this.cacheMethodReferences);
+                typeDefinition.CreateOverrideMethod("Dispose", this.typeSystem.Void, this.cacheMethodReferences, this.compilerAttributeReference);
             }
 
             if (typeWithoutDisposeAsyncMethod.Any())
@@ -129,7 +131,7 @@
 
                 foreach (var typeDefinition in typeWithoutDisposeAsyncMethod)
                 {
-                    typeDefinition.CreateOverrideMethod("DisposeAsync", taskTypeReference, this.cacheMethodReferences);
+                    typeDefinition.CreateOverrideMethod("DisposeAsync", taskTypeReference, this.cacheMethodReferences, this.compilerAttributeReference);
                 }
             }
         }
@@ -145,6 +147,12 @@
                 this.objectDisposedExceptionReference = this.ModuleDefinition.Import(objectDisposedExceptionConstructor);
             }
 
+            if (this.compilerAttributeReference == null)
+            {
+                var compilerAttributeDefinition = msCoretypeDefinitions.Single(x => x.FullName == "System.Runtime.CompilerServices.CompilerGeneratedAttribute")
+                                                                       .Methods.Single(x => x.Name == ".ctor");
+                this.compilerAttributeReference = this.ModuleDefinition.Import(compilerAttributeDefinition);
+            }
             // ReSharper disable once LoopCanBePartlyConvertedToQuery
             foreach (var typeDefinition in this.types.Value)
             {
@@ -217,7 +225,9 @@
             {
                 if (!type.Fields.Any(x => x.Name.Equals("isDisposed")))
                 {
-                    type.Fields.Add(new FieldDefinition("isDisposed", FieldAttributes.Private, this.typeSystem.Boolean));
+                    var fieldDefinition = new FieldDefinition("isDisposed", FieldAttributes.Private, this.typeSystem.Boolean);
+                    fieldDefinition.CustomAttributes.Add(new CustomAttribute(this.compilerAttributeReference));
+                    type.Fields.Add(fieldDefinition);
                 }
             }
 
