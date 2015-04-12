@@ -243,6 +243,7 @@
             {
                 var methods = type.Methods
                                   .Where(x => !x.IsStatic &&
+                                              !x.IsGeneratedCode() &&
                                               !x.Name.Equals("Dispose") &&
                                               !x.Name.Equals("DisposeAsync") &&
                                               !x.Name.Equals(".ctor"));
