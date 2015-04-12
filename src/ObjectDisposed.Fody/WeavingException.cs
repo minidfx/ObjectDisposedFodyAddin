@@ -14,7 +14,7 @@
         /// <param name="message">The message that describes the error.</param>
         /// <param name="errorCode">The error code of the <see cref="WeavingException" />.</param>
         public WeavingException(string message,
-                               WeavingErrorCodes errorCode)
+                                WeavingErrorCodes errorCode)
             : base(message)
         {
             this.ErrorCode = errorCode;

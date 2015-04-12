@@ -138,12 +138,13 @@
 
         private void InitializeWeaving(IEnumerable<TypeDefinition> msCoreTypes)
         {
+            var msCoretypeDefinitions = msCoreTypes as TypeDefinition[] ?? msCoreTypes.ToArray();
             if (this.objectDisposedExceptionReference == null)
             {
-                var objectDisposedExceptionConstructor = msCoreTypes.Single(x => x.FullName == "System.ObjectDisposedException")
-                                                                    .Methods.Single(x => x.Name == ".ctor" &&
-                                                                                         x.Parameters.Count() == 1 &&
-                                                                                         x.Parameters.All(p => p.ParameterType.FullName == "System.String"));
+                var objectDisposedExceptionConstructor = msCoretypeDefinitions.Single(x => x.FullName == "System.ObjectDisposedException")
+                                                                              .Methods.Single(x => x.Name == ".ctor" &&
+                                                                                                   x.Parameters.Count() == 1 &&
+                                                                                                   x.Parameters.All(p => p.ParameterType.FullName == "System.String"));
                 this.objectDisposedExceptionReference = this.ModuleDefinition.Import(objectDisposedExceptionConstructor);
             }
 
@@ -153,6 +154,7 @@
                                                                        .Methods.Single(x => x.Name == ".ctor");
                 this.compilerAttributeReference = this.ModuleDefinition.Import(compilerAttributeDefinition);
             }
+
             // ReSharper disable once LoopCanBePartlyConvertedToQuery
             foreach (var typeDefinition in this.types.Value)
             {
