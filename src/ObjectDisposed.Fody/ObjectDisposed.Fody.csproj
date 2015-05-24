@@ -49,18 +49,27 @@
   <ItemGroup>
     <Reference Include="Mono.Cecil, Version=0.9.5.0, Culture=neutral, PublicKeyToken=0738eb9f132ed756, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\packages\FodyCecil.1.28.1\lib\net40\Mono.Cecil.dll</HintPath>
+      <HintPath>..\..\packages\FodyCecil.1.28.3\lib\net40\Mono.Cecil.dll</HintPath>
+    </Reference>
+    <Reference Include="Mono.Cecil.Mdb">
+      <HintPath>..\..\packages\FodyCecil.1.28.3\lib\net40\Mono.Cecil.Mdb.dll</HintPath>
+    </Reference>
+    <Reference Include="Mono.Cecil.Pdb">
+      <HintPath>..\..\packages\FodyCecil.1.28.3\lib\net40\Mono.Cecil.Pdb.dll</HintPath>
     </Reference>
     <Reference Include="Mono.Cecil.Rocks, Version=0.9.5.0, Culture=neutral, PublicKeyToken=0738eb9f132ed756, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\packages\FodyCecil.1.28.1\lib\net40\Mono.Cecil.Rocks.dll</HintPath>
+      <HintPath>..\..\packages\FodyCecil.1.28.3\lib\net40\Mono.Cecil.Rocks.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Drawing" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="CecilExtensions.cs" />
+    <Compile Include="Extensions\ILProcessorExtensions.cs" />
+    <Compile Include="Extensions\MethodDefinitionExtensions.cs" />
+    <Compile Include="Extensions\MethodReferenceExtensions.cs" />
+    <Compile Include="Extensions\TypeDefinitionExtensions.cs" />
     <Compile Include="Instructions.cs" />
     <Compile Include="ModuleWeaver.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -76,9 +85,9 @@
   <ItemGroup>
     <None Include="App.config" />
     <None Include="..\..\key.snk" />
-    <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="packages.config" />
     <None Include="Resources\1426897298_erase-128.png" />
   </ItemGroup>
   <ItemGroup>

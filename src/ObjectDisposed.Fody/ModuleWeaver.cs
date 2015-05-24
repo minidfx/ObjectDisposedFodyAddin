@@ -3,43 +3,22 @@
     using System;
     using System.Collections.Generic;
     using System.Linq;
+    using System.Reflection;
 
     using Mono.Cecil;
-    using Mono.Cecil.Cil;
     using Mono.Cecil.Rocks;
+    using Mono.Collections.Generic;
+
+    using ObjectDisposedFodyAddin.Extensions;
+
+    using FieldAttributes = Mono.Cecil.FieldAttributes;
+    using MethodAttributes = Mono.Cecil.MethodAttributes;
 
     /// <summary>
     ///     The module containing the logic for injecting instructions to check whether an object is already disposed.
     /// </summary>
     public sealed class ModuleWeaver
     {
-        /// <summary>
-        ///     Contains <see cref="MethodReference"/>s already resolved.
-        /// </summary>
-        private readonly IDictionary<string, MethodReference> cacheMethodReferences = new Dictionary<string, MethodReference>();
-
-        private MethodReference compilerAttributeReference;
-
-        /// <summary>
-        ///     The constructor reference with string as argument of the <see cref="ObjectDisposedException" /> class.
-        /// </summary>
-        private MethodReference objectDisposedExceptionReference;
-
-        /// <summary>
-        ///     Contains <see cref="TypeReference"/>s available in the module.
-        /// </summary>
-        private IEnumerable<TypeReference> typeReferences;
-
-        /// <summary>
-        ///     Filtered <see cref="Type" />s found in the <see cref="System.Reflection.Assembly" />.
-        /// </summary>
-        private Lazy<IEnumerable<TypeDefinition>> types;
-
-        /// <summary>
-        ///     System <see cref="Type" />s loaded from the mscorlib.
-        /// </summary>
-        private TypeSystem typeSystem;
-
         /// <summary>
         ///     Initialize an instance of <see cref="ModuleWeaver" /> class.
         /// </summary>
@@ -86,120 +65,182 @@
         public void Execute()
         {
             this.LogDebug("Entry into ObjectDisposedFodyAddin Execute method.");
-            this.cacheMethodReferences.Clear();
 
-            var msCoreLibDefinition = this.ModuleDefinition.AssemblyResolver.Resolve("mscorlib");
-            var msCoreTypes = msCoreLibDefinition.MainModule.Types;
+            var msCoreAssemblyDefinition = this.ModuleDefinition.AssemblyResolver.Resolve("mscorlib");
+            var systemAssemblyDefinition = this.ModuleDefinition.AssemblyResolver.Resolve("System");
+            var msCoreTypeDefinitions = msCoreAssemblyDefinition.MainModule.Types;
+            var systemTypeDefinitions = systemAssemblyDefinition.MainModule.Types;
 
-            this.typeSystem = this.ModuleDefinition.TypeSystem;
-            this.types = new Lazy<IEnumerable<TypeDefinition>>(() => this.ModuleDefinition.Types.Where(x => x.IsClass &&
-                                                                                                            !x.IsAbstract &&
-                                                                                                            !x.IsInterface &&
-                                                                                                            x.HasDisposeInterface() &&
-                                                                                                            !x.IsGeneratedCode() &&
-                                                                                                            !x.SkipDisposeGuard()));
+            var typeSystem = this.ModuleDefinition.TypeSystem;
+            var syncTypes = this.ModuleDefinition.Types.Where(x => x.IsClass &&
+                                                                   !x.IsInterface &&
+                                                                   x.HasIDisposableInterface() &&
+                                                                   !x.IsGeneratedCode() &&
+                                                                   !x.SkipDisposeGuard());
 
-            this.typeReferences = this.ModuleDefinition.GetTypeReferences();
+            var asyncTypes = this.ModuleDefinition.Types.Where(x => x.IsClass &&
+                                                                    !x.IsInterface &&
+                                                                    x.HasIAsyncDisposableInterface() &&
+                                                                    !x.IsGeneratedCode() &&
+                                                                    !x.SkipDisposeGuard());
 
-            this.InitializeWeaving(msCoreTypes);
+            var objectDisposedConstructorMethodReference = this.GetObjectDisposedExceptionConstructor(msCoreTypeDefinitions);
+            var generatedCodeCustomAttribute = this.GetGeneratedCodeAttribute(systemTypeDefinitions, typeSystem);
+            var taskContinueWithMethodReference = this.GetTaskContinueWithMethodReference(msCoreTypeDefinitions);
+            var taskTypeReference = this.GetTaskTypeReference(msCoreTypeDefinitions);
+            var actionConstructorMethodReference = this.GetActionConstructor(msCoreTypeDefinitions, taskTypeReference);
 
-            this.CreateDisposeMethodIfNotExists();
-            this.AddIsDisposedPrivateMember();
-            this.AddSetToDisposedIntructionsIntoDisposeMethods();
-            this.AddGuardInstructionsIntoMethods();
+            Func<TypeDefinition, Exception> bothInterfacesException = t => new WeavingException(string.Format("The type {0} cannot have both interface {1} and {2}", t.FullName, "IDisposable", "IAsyncDisposable"), WeavingErrorCodes.ContainsBothInterface);
+
+            // Summary : Apply modifications for each types.
+            // 1. Create the property (getter/setter)
+            // 1.1 The getter property will call the base property if it exists to determines whether the type is completely disposed.
+            // 1.3 Set the backing field to <see langword="True" /> when a dispose method is called.
+            // 2. Add guard instructions into every public methods.
+            // 3. Add instructions to set <see langword="True" /> to the isDisposed field when the dispose method is called.
+
+            // Fetch disposable types
+            foreach (var type in syncTypes)
+            {
+                if (type.HasIAsyncDisposableInterface())
+                {
+                    throw bothInterfacesException(type);
+                }
+
+                // Create the isDisposed field
+                var backingDisposeField = type.CreateField("isDisposed", FieldAttributes.Private, typeSystem.Boolean, new[] { generatedCodeCustomAttribute });
+
+                // Create the protected virtual property IsDisposed
+                CreateIsDisposedProperty(type, backingDisposeField, typeSystem, new[] { generatedCodeCustomAttribute });
+
+                // Add guard instructions into any public members of the type
+                type.AddGuardInstructions(objectDisposedConstructorMethodReference);
+
+                // Set the field isDisposed to True
+                AddInstructionsToDipose(type, backingDisposeField);
+            }
+
+            // Fetch async disposable types
+            foreach (var asyncType in asyncTypes)
+            {
+                if (asyncType.HasIDisposableInterface())
+                {
+                    throw bothInterfacesException(asyncType);
+                }
+
+                // Create the isDisposed field
+                var backingDisposeField = asyncType.CreateField("isDisposed", FieldAttributes.Private, typeSystem.Boolean, new[] { generatedCodeCustomAttribute });
+
+                // Create the protected virtual property IsDisposed
+                CreateIsDisposedProperty(asyncType, backingDisposeField, typeSystem, new[] { generatedCodeCustomAttribute });
+
+                var disposeAsyncMethod = asyncType.Methods
+                                                  .SingleOrDefault(x => !x.IsStatic &&
+                                                                        x.Name.Equals("DisposeAsync") &&
+                                                                        !x.Parameters.Any());
+
+                if (disposeAsyncMethod != null)
+                {
+                    // Add guard instructions into any public members of the type
+                    asyncType.AddGuardInstructions(objectDisposedConstructorMethodReference);
+
+                    // INFO: [MiniDfx 23.05.15 15:23] This is not a lambda expression, It's just a simple method but for a better understanding what I do, I called it lambda.
+                    var lambdaTaskContinueWithMethodReference = asyncType.CreateMethod("ContinueWithSetToDisposed",
+                                                                                       MethodAttributes.Private | MethodAttributes.HideBySig,
+                                                                                       typeSystem.Void,
+                                                                                       i => Instructions.GetSetIsDisposedFullInstructions(i, backingDisposeField));
+
+                    lambdaTaskContinueWithMethodReference.CustomAttributes.Add(generatedCodeCustomAttribute);
+                    lambdaTaskContinueWithMethodReference.Parameters.Add(new ParameterDefinition(taskTypeReference));
+
+                    // Create the method to set to true the local field.
+                    var setToDisposedMethod = asyncType.CreateMethod("SetToDisposedAsync", MethodAttributes.Private | MethodAttributes.HideBySig, taskTypeReference, i => Instructions.GetSetIsDisposedAsyncMethodInstructions(i, taskContinueWithMethodReference, actionConstructorMethodReference, lambdaTaskContinueWithMethodReference));
+
+                    setToDisposedMethod.CustomAttributes.Add(generatedCodeCustomAttribute);
+                    setToDisposedMethod.Parameters.Add(new ParameterDefinition(taskTypeReference));
+
+                    disposeAsyncMethod.AddSetIsDisposedAsync(setToDisposedMethod);
+                }
+            }
 
             this.LogDebug("Execute method executed successfully.");
         }
 
-        /// <summary>
-        ///     Creates the disposable method for any types that inherit another type that implements a disposable interface
-        ///     for injecting the instructions to set isDisposed to true when it is called.
-        /// </summary>
-        private void CreateDisposeMethodIfNotExists()
+        private TypeReference GetTaskTypeReference(IEnumerable<TypeDefinition> systemTypeDefinitions)
         {
-            var typeWithoutDisposeMethod = this.types.Value.Where(x => x.HasIDisposableInterface() && x.Methods.All(m => m.Name != "Dispose")).ToArray();
-            var typeWithoutDisposeAsyncMethod = this.types.Value.Where(x => x.HasIAsyncDisposableInterface() && x.Methods.All(m => m.Name != "DisposeAsync")).ToArray();
+            var taskTypeDefinition = systemTypeDefinitions.Single(x => x.FullName == "System.Threading.Tasks.Task");
 
-            foreach (var typeDefinition in typeWithoutDisposeMethod)
+            return this.ModuleDefinition.Import(taskTypeDefinition);
+        }
+
+        private MethodReference GetActionConstructor(IEnumerable<TypeDefinition> msCoreTypeDefinitions,
+                                                     TypeReference taskTypeReference)
+        {
+            var actionConstructorMethodDefinition = msCoreTypeDefinitions.Single(x => x.FullName == "System.Action`1");
+
+            var actionTypeReference = this.ModuleDefinition.Import(actionConstructorMethodDefinition);
+            var actionGenericInstance = actionTypeReference.MakeGenericInstanceType(taskTypeReference);
+
+            var actionConstructorDefinition = actionGenericInstance.Resolve().GetConstructors().Single();
+            var actionConstructorReference = this.ModuleDefinition.Import(actionConstructorDefinition);
+
+            return actionConstructorReference.MakeHostInstanceGeneric(taskTypeReference);
+        }
+
+        private static void AddInstructionsToDipose(TypeDefinition type,
+                                                    FieldReference backingDisposeField)
+        {
+            var disposeMethod = type.Methods
+                                    .SingleOrDefault(x => !x.IsStatic &&
+                                                          x.Name.Equals("Dispose") &&
+                                                          !x.Parameters.Any());
+
+            if (disposeMethod != null)
             {
-                typeDefinition.CreateOverrideMethod("Dispose", this.typeSystem.Void, this.cacheMethodReferences, this.compilerAttributeReference);
-            }
-
-            if (typeWithoutDisposeAsyncMethod.Any())
-            {
-                var taskTypeReference = this.typeReferences.Single(x => x.FullName == "System.Threading.Tasks.Task");
-
-                foreach (var typeDefinition in typeWithoutDisposeAsyncMethod)
-                {
-                    typeDefinition.CreateOverrideMethod("DisposeAsync", taskTypeReference, this.cacheMethodReferences, this.compilerAttributeReference);
-                }
+                disposeMethod.AddSetIsDisposedSync(backingDisposeField);
             }
         }
 
-        private void InitializeWeaving(IEnumerable<TypeDefinition> msCoreTypes)
+        private MethodReference GetObjectDisposedExceptionConstructor(IEnumerable<TypeDefinition> msCoreTypeDefinitions)
         {
-            var msCoretypeDefinitions = msCoreTypes as TypeDefinition[] ?? msCoreTypes.ToArray();
-            if (this.objectDisposedExceptionReference == null)
-            {
-                var objectDisposedExceptionConstructor = msCoretypeDefinitions.Single(x => x.FullName == "System.ObjectDisposedException")
-                                                                              .Methods.Single(x => x.Name == ".ctor" &&
-                                                                                                   x.Parameters.Count() == 1 &&
-                                                                                                   x.Parameters.All(p => p.ParameterType.FullName == "System.String"));
-                this.objectDisposedExceptionReference = this.ModuleDefinition.Import(objectDisposedExceptionConstructor);
-            }
-
-            if (this.compilerAttributeReference == null)
-            {
-                var compilerAttributeDefinition = msCoretypeDefinitions.Single(x => x.FullName == "System.Runtime.CompilerServices.CompilerGeneratedAttribute")
-                                                                       .Methods.Single(x => x.Name == ".ctor");
-                this.compilerAttributeReference = this.ModuleDefinition.Import(compilerAttributeDefinition);
-            }
-
-            // ReSharper disable once LoopCanBePartlyConvertedToQuery
-            foreach (var typeDefinition in this.types.Value)
-            {
-                if (typeDefinition.Interfaces.Any(x => x.FullName == "System.IDisposable") && typeDefinition.Interfaces.Any(x => x.Name == "IAsyncDisposable"))
-                {
-                    throw new WeavingException(string.Format("The type {0} cannot have both interface {1} and {2}", typeDefinition.Name, "IDisposable", "IAsyncDisposable"),
-                                               WeavingErrorCodes.ContainsBothInterface);
-                }
-            }
-
-            TypeDefinition typeNotUseable;
-            if ((typeNotUseable = this.types.Value.FirstOrDefault(t => t.Fields.Any(f => f.Name == "isDisposed" &&
-                                                                                         (f.FieldType.MetadataType != MetadataType.Boolean || f.Attributes != FieldAttributes.Private)))) != null)
-            {
-                throw new WeavingException(string.Format("The type {0} contains already a member 'isDisposed' not useable.", typeNotUseable.Name),
-                                           WeavingErrorCodes.NotUseable);
-            }
+            var objectDisposedExceptionConstructor = msCoreTypeDefinitions.Single(x => x.FullName == "System.ObjectDisposedException")
+                                                                          .Methods.Single(x => x.IsConstructor &&
+                                                                                               x.Parameters.Count() == 1 &&
+                                                                                               x.Parameters.All(p => p.ParameterType.FullName == "System.String"));
+            return this.ModuleDefinition.Import(objectDisposedExceptionConstructor);
         }
 
-        private void AddSetToDisposedIntructionsIntoDisposeMethods()
+        private static void CreateIsDisposedProperty(TypeDefinition type,
+                                                     FieldReference backingDisposeField,
+                                                     TypeSystem typeSystem,
+                                                     IEnumerable<CustomAttribute> customAttributes)
         {
-            this.LogDebug("Entry into ObjectDisposedFodyAddin AddSetToDisposedIntructionsIntoDisposeMethods method");
+            var baseIsDisposedProperty = type.GetIsDisposedBaseProperty();
+            type.CreateOverrideProperty("IsDisposed", baseIsDisposedProperty, backingDisposeField, typeSystem.Boolean, typeSystem.Void, customAttributes);
+        }
 
-            foreach (var type in this.types.Value)
-            {
-                var methods = type.Methods
-                                  .Where(x => !x.IsStatic &&
-                                              x.Name.Equals("Dispose") ||
-                                              x.Name.Equals("DisposeAsync"));
+        private CustomAttribute GetGeneratedCodeAttribute(Collection<TypeDefinition> msCoreTypeDefinitions,
+                                                          TypeSystem typeSystem)
+        {
+            var generateCodeAttributeDefinition = msCoreTypeDefinitions.Single(x => x.FullName == "System.CodeDom.Compiler.GeneratedCodeAttribute")
+                                                                       .Methods.Single(x => x.IsConstructor && x.Parameters.Count == 2);
 
-                var disposeField = type.Fields.Single(x => x.Name == "isDisposed");
+            var assemnlyFileVersion = Assembly.GetExecutingAssembly().GetName().Version.ToString();
 
-                foreach (var method in methods)
-                {
-                    var ilProcessor = method.Body.GetILProcessor();
-                    var returnInstruction = method.Body.Instructions.Single(x => x.OpCode.Code == Code.Ret);
+            var customAttribute = new CustomAttribute(this.ModuleDefinition.Import(generateCodeAttributeDefinition));
+            customAttribute.ConstructorArguments.Add(new CustomAttributeArgument(typeSystem.String, "ObjectDisposed.Fody"));
+            customAttribute.ConstructorArguments.Add(new CustomAttributeArgument(typeSystem.String, assemnlyFileVersion));
 
-                    var newInstructions = Instructions.GetSetIsDisposedInstructions(ilProcessor, disposeField);
-                    ilProcessor.InsertBeforeRange(returnInstruction, newInstructions);
+            return customAttribute;
+        }
 
-                    method.Body.OptimizeMacros();
-                }
-            }
-
-            this.LogDebug("AddSetToDisposedIntructionsIntoDisposeMethods method executed successfully.");
+        private MethodReference GetTaskContinueWithMethodReference(IEnumerable<TypeDefinition> systemTypeDefinitions)
+        {
+            var continueWithMethodDefinition = systemTypeDefinitions.Single(x => x.FullName.Equals("System.Threading.Tasks.Task"))
+                                                                    .Methods.Single(x => x.Name.Equals("ContinueWith") &&
+                                                                                         x.Parameters.Any(p => p.ParameterType.Name == "Action`1") &&
+                                                                                         x.Parameters.Count == 1);
+            return this.ModuleDefinition.Import(continueWithMethodDefinition);
         }
 
         /// <summary>
@@ -208,66 +249,6 @@
         public void Cancel()
         {
             this.LogDebug("ObjectDisposedFodyAddin is canceled while the execution.");
-        }
-
-        /// <summary>
-        ///     Will be called after all weaving has occurred and the module has been saved.
-        /// </summary>
-        public void AfterWeaving()
-        {
-            this.LogDebug("ObjectDisposedFodyAddin execute some post operations.");
-        }
-
-        private void AddIsDisposedPrivateMember()
-        {
-            this.LogDebug("Entry into ObjectDisposedFodyAddin AddIsDisposedPrivateMember method");
-
-            // ReSharper disable once LoopCanBePartlyConvertedToQuery
-            foreach (var type in this.types.Value)
-            {
-                if (!type.Fields.Any(x => x.Name.Equals("isDisposed")))
-                {
-                    var fieldDefinition = new FieldDefinition("isDisposed", FieldAttributes.Private, this.typeSystem.Boolean);
-                    fieldDefinition.CustomAttributes.Add(new CustomAttribute(this.compilerAttributeReference));
-                    type.Fields.Add(fieldDefinition);
-                }
-            }
-
-            this.LogDebug("AddIsDisposedPrivateMember method executed successfully.");
-        }
-
-        private void AddGuardInstructionsIntoMethods()
-        {
-            this.LogDebug("Entry into ObjectDisposedFodyAddin AddGuardInstructionsIntoMethods method");
-
-            // ReSharper disable once LoopCanBePartlyConvertedToQuery
-            foreach (var type in this.types.Value)
-            {
-                var methods = type.Methods
-                                  .Where(x => !x.IsStatic &&
-                                              !x.IsGeneratedCode() &&
-                                              !x.Name.Equals("Dispose") &&
-                                              !x.Name.Equals("DisposeAsync") &&
-                                              !x.Name.Equals(".ctor"));
-
-                var disposeField = type.Fields.Single(x => x.Name == "isDisposed");
-
-                foreach (var method in methods)
-                {
-                    var ilProcessor = method.Body.GetILProcessor();
-                    var firstInstruction = method.Body.Instructions.FirstOrDefault();
-
-                    var newInstructions = Instructions.GetGuardInstructions(ilProcessor,
-                                                                            type,
-                                                                            disposeField,
-                                                                            this.objectDisposedExceptionReference);
-                    ilProcessor.InsertBeforeRange(firstInstruction, newInstructions);
-
-                    method.Body.OptimizeMacros();
-                }
-            }
-
-            this.LogDebug("AddGuardInstructionsIntoMethods method executed successfully.");
         }
     }
 }
