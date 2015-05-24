@@ -238,7 +238,7 @@
                               ? MethodAttributes.NewSlot
                               : MethodAttributes.ReuseSlot;
 
-            var getter = GetPropertyGetter(getterName, attributes, basePropertyDefinition, propertyTypeReference, backingFieldReference);
+            var getter = CreatePropertyGetter(getterName, attributes, basePropertyDefinition, propertyTypeReference, backingFieldReference);
 
             var newProperty = new PropertyDefinition(name, PropertyAttributes.Unused, propertyTypeReference)
                                   {
@@ -256,11 +256,11 @@
             return newProperty;
         }
 
-        private static MethodDefinition GetPropertyGetter(string name,
-                                                          MethodAttributes attributes,
-                                                          PropertyDefinition propertyDefinition,
-                                                          TypeReference propertyType,
-                                                          FieldReference backingFieldReference)
+        private static MethodDefinition CreatePropertyGetter(string name,
+                                                             MethodAttributes attributes,
+                                                             PropertyDefinition propertyDefinition,
+                                                             TypeReference propertyType,
+                                                             FieldReference backingFieldReference)
         {
             var getter = new MethodDefinition(name, attributes, propertyType);
 
@@ -283,7 +283,8 @@
                                                     !x.Name.Equals("DisposeAsync") &&
                                                     !x.Name.Equals(".ctor"));
 
-            var propertyIsDisposedGetter = typeDefinition.Properties.Single(x => x.Name == "IsDisposed");
+            var propertyIsDisposedGetter = typeDefinition.Properties.SingleOrDefault(x => x.Name == "IsDisposed")
+                                           ?? typeDefinition.GetIsDisposedBaseProperty();
 
             foreach (var method in methods)
             {

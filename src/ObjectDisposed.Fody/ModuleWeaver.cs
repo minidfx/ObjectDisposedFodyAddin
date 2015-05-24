@@ -7,7 +7,6 @@
 
     using Mono.Cecil;
     using Mono.Cecil.Rocks;
-    using Mono.Collections.Generic;
 
     using ObjectDisposedFodyAddin.Extensions;
 
@@ -84,11 +83,14 @@
                                                                     !x.IsGeneratedCode() &&
                                                                     !x.SkipDisposeGuard());
 
-            var objectDisposedConstructorMethodReference = this.GetObjectDisposedExceptionConstructor(msCoreTypeDefinitions);
+            // Custom attribute
             var generatedCodeCustomAttribute = this.GetGeneratedCodeAttribute(systemTypeDefinitions, typeSystem);
+
+            // References
+            var objectDisposedConstructorMethodReference = this.GetObjectDisposedExceptionConstructor(msCoreTypeDefinitions);
             var taskContinueWithMethodReference = this.GetTaskContinueWithMethodReference(msCoreTypeDefinitions);
             var taskTypeReference = this.GetTaskTypeReference(msCoreTypeDefinitions);
-            var actionConstructorMethodReference = this.GetActionConstructor(msCoreTypeDefinitions, taskTypeReference);
+            var actionAsTaskConstructorMethodReference = this.GetActionAsTaskConstructor(msCoreTypeDefinitions, taskTypeReference);
 
             Func<TypeDefinition, Exception> bothInterfacesException = t => new WeavingException(string.Format("The type {0} cannot have both interface {1} and {2}", t.FullName, "IDisposable", "IAsyncDisposable"), WeavingErrorCodes.ContainsBothInterface);
 
@@ -107,17 +109,25 @@
                     throw bothInterfacesException(type);
                 }
 
-                // Create the isDisposed field
-                var backingDisposeField = type.CreateField("isDisposed", FieldAttributes.Private, typeSystem.Boolean, new[] { generatedCodeCustomAttribute });
+                var disposeMethod = type.Methods
+                                        .SingleOrDefault(x => !x.IsStatic &&
+                                                              x.Name.Equals("Dispose") &&
+                                                              !x.Parameters.Any());
 
-                // Create the protected virtual property IsDisposed
-                CreateIsDisposedProperty(type, backingDisposeField, typeSystem, new[] { generatedCodeCustomAttribute });
+                if (disposeMethod != null)
+                {
+                    // Create the isDisposed field
+                    var backingDisposeField = type.CreateField("isDisposed", FieldAttributes.Private, typeSystem.Boolean, new[] { generatedCodeCustomAttribute });
+
+                    // Create the protected virtual property IsDisposed
+                    CreateIsDisposedProperty(type, backingDisposeField, typeSystem, new[] { generatedCodeCustomAttribute });
+
+                    // Set the field isDisposed to True
+                    disposeMethod.AddSetIsDisposedSync(backingDisposeField);
+                }
 
                 // Add guard instructions into any public members of the type
                 type.AddGuardInstructions(objectDisposedConstructorMethodReference);
-
-                // Set the field isDisposed to True
-                AddInstructionsToDipose(type, backingDisposeField);
             }
 
             // Fetch async disposable types
@@ -128,12 +138,6 @@
                     throw bothInterfacesException(asyncType);
                 }
 
-                // Create the isDisposed field
-                var backingDisposeField = asyncType.CreateField("isDisposed", FieldAttributes.Private, typeSystem.Boolean, new[] { generatedCodeCustomAttribute });
-
-                // Create the protected virtual property IsDisposed
-                CreateIsDisposedProperty(asyncType, backingDisposeField, typeSystem, new[] { generatedCodeCustomAttribute });
-
                 var disposeAsyncMethod = asyncType.Methods
                                                   .SingleOrDefault(x => !x.IsStatic &&
                                                                         x.Name.Equals("DisposeAsync") &&
@@ -141,40 +145,47 @@
 
                 if (disposeAsyncMethod != null)
                 {
-                    // Add guard instructions into any public members of the type
-                    asyncType.AddGuardInstructions(objectDisposedConstructorMethodReference);
+                    // Create the isDisposed field
+                    var backingDisposeField = asyncType.CreateField("isDisposed", FieldAttributes.Private, typeSystem.Boolean, new[] { generatedCodeCustomAttribute });
+
+                    // Create the protected virtual property IsDisposed
+                    CreateIsDisposedProperty(asyncType, backingDisposeField, typeSystem, new[] { generatedCodeCustomAttribute });
 
                     // INFO: [MiniDfx 23.05.15 15:23] This is not a lambda expression, It's just a simple method but for a better understanding what I do, I called it lambda.
-                    var lambdaTaskContinueWithMethodReference = asyncType.CreateMethod("ContinueWithSetToDisposed",
-                                                                                       MethodAttributes.Private | MethodAttributes.HideBySig,
-                                                                                       typeSystem.Void,
-                                                                                       i => Instructions.GetSetIsDisposedFullInstructions(i, backingDisposeField));
+                    var lambdaSetToDisposed = asyncType.CreateMethod("SetToDisposed",
+                                                                     MethodAttributes.Private | MethodAttributes.HideBySig,
+                                                                     typeSystem.Void,
+                                                                     i => Instructions.GetDisposeMethodFullInstructions(i, backingDisposeField));
 
-                    lambdaTaskContinueWithMethodReference.CustomAttributes.Add(generatedCodeCustomAttribute);
-                    lambdaTaskContinueWithMethodReference.Parameters.Add(new ParameterDefinition(taskTypeReference));
+                    lambdaSetToDisposed.CustomAttributes.Add(generatedCodeCustomAttribute);
+                    lambdaSetToDisposed.Parameters.Add(new ParameterDefinition(taskTypeReference));
 
                     // Create the method to set to true the local field.
-                    var setToDisposedMethod = asyncType.CreateMethod("SetToDisposedAsync", MethodAttributes.Private | MethodAttributes.HideBySig, taskTypeReference, i => Instructions.GetSetIsDisposedAsyncMethodInstructions(i, taskContinueWithMethodReference, actionConstructorMethodReference, lambdaTaskContinueWithMethodReference));
+                    var functionContinueWith = asyncType.CreateMethod("ContinueWithSetToDisposed", MethodAttributes.Private | MethodAttributes.HideBySig, taskTypeReference, i => Instructions.GetDisposeAsyncMethodInstructions(i, taskContinueWithMethodReference, actionAsTaskConstructorMethodReference, lambdaSetToDisposed));
 
-                    setToDisposedMethod.CustomAttributes.Add(generatedCodeCustomAttribute);
-                    setToDisposedMethod.Parameters.Add(new ParameterDefinition(taskTypeReference));
+                    functionContinueWith.CustomAttributes.Add(generatedCodeCustomAttribute);
+                    functionContinueWith.Parameters.Add(new ParameterDefinition(taskTypeReference));
 
-                    disposeAsyncMethod.AddSetIsDisposedAsync(setToDisposedMethod);
+                    // Add instructions to dispose the object when the output task is finished
+                    disposeAsyncMethod.AddSetIsDisposedAsync(functionContinueWith);
                 }
+
+                // Add guard instructions into any public members of the type
+                asyncType.AddGuardInstructions(objectDisposedConstructorMethodReference);
             }
 
             this.LogDebug("Execute method executed successfully.");
         }
 
-        private TypeReference GetTaskTypeReference(IEnumerable<TypeDefinition> systemTypeDefinitions)
+        private TypeReference GetTaskTypeReference(IEnumerable<TypeDefinition> msCoreTypeDefinitions)
         {
-            var taskTypeDefinition = systemTypeDefinitions.Single(x => x.FullName == "System.Threading.Tasks.Task");
+            var taskTypeDefinition = msCoreTypeDefinitions.Single(x => x.FullName == "System.Threading.Tasks.Task");
 
             return this.ModuleDefinition.Import(taskTypeDefinition);
         }
 
-        private MethodReference GetActionConstructor(IEnumerable<TypeDefinition> msCoreTypeDefinitions,
-                                                     TypeReference taskTypeReference)
+        private MethodReference GetActionAsTaskConstructor(IEnumerable<TypeDefinition> msCoreTypeDefinitions,
+                                                           TypeReference taskTypeReference)
         {
             var actionConstructorMethodDefinition = msCoreTypeDefinitions.Single(x => x.FullName == "System.Action`1");
 
@@ -185,20 +196,6 @@
             var actionConstructorReference = this.ModuleDefinition.Import(actionConstructorDefinition);
 
             return actionConstructorReference.MakeHostInstanceGeneric(taskTypeReference);
-        }
-
-        private static void AddInstructionsToDipose(TypeDefinition type,
-                                                    FieldReference backingDisposeField)
-        {
-            var disposeMethod = type.Methods
-                                    .SingleOrDefault(x => !x.IsStatic &&
-                                                          x.Name.Equals("Dispose") &&
-                                                          !x.Parameters.Any());
-
-            if (disposeMethod != null)
-            {
-                disposeMethod.AddSetIsDisposedSync(backingDisposeField);
-            }
         }
 
         private MethodReference GetObjectDisposedExceptionConstructor(IEnumerable<TypeDefinition> msCoreTypeDefinitions)
@@ -219,7 +216,7 @@
             type.CreateOverrideProperty("IsDisposed", baseIsDisposedProperty, backingDisposeField, typeSystem.Boolean, typeSystem.Void, customAttributes);
         }
 
-        private CustomAttribute GetGeneratedCodeAttribute(Collection<TypeDefinition> msCoreTypeDefinitions,
+        private CustomAttribute GetGeneratedCodeAttribute(IEnumerable<TypeDefinition> msCoreTypeDefinitions,
                                                           TypeSystem typeSystem)
         {
             var generateCodeAttributeDefinition = msCoreTypeDefinitions.Single(x => x.FullName == "System.CodeDom.Compiler.GeneratedCodeAttribute")

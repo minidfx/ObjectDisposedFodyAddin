@@ -91,7 +91,7 @@
             var ilProcessor = methodDefinition.Body.GetILProcessor();
 
             ilProcessor.InsertBeforeRange(ilProcessor.Body.Instructions.Single(x => x.OpCode.Code == Code.Ret),
-                                          Instructions.GetSetIsDisposedPartialInstructions(ilProcessor, fieldReference));
+                                          Instructions.GetDisposeMethodPartialInstructions(ilProcessor, fieldReference));
         }
 
         /// <summary>

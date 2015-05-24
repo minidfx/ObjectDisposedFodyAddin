@@ -29,7 +29,7 @@
         ///     The constructor reference of the class <see cref="ObjectDisposedException" />.
         /// </param>
         /// <returns>
-        ///     A collection of <see cref="Instruction" />.
+        ///     The <see cref="Instruction" />s yielded.
         /// </returns>
         public static IEnumerable<Instruction> GetGuardInstructions(ILProcessor ilProcessor,
                                                                     MemberReference memberReference,
@@ -61,8 +61,7 @@
                                                                                PropertyDefinition basePropertyDefinition,
                                                                                FieldReference disposeFieldReference)
         {
-            // Load the field isDisposed
-            yield return ilProcessor.Create(OpCodes.Ldarg_0);
+            yield return ilProcessor.Create(OpCodes.Ldarg_0); // Load the field isDisposed
             yield return ilProcessor.Create(OpCodes.Ldfld, disposeFieldReference); // Push the field value on the stack
 
             if (basePropertyDefinition != null)
@@ -79,14 +78,26 @@
                 // Exit the method whether the base property has been called.
                 yield return ilProcessor.Create(OpCodes.Ret);
 
-                // Push 0 on the stack
+                // Push the field value on the stack
                 yield return push0OnStack;
             }
 
             yield return ilProcessor.Create(OpCodes.Ret);
         }
 
-        public static IEnumerable<Instruction> GetSetIsDisposedPartialInstructions(ILProcessor ilProcessor,
+        /// <summary>
+        ///     Yields partial <see cref="Instruction" />s to set to disposed the backing field.
+        /// </summary>
+        /// <param name="ilProcessor">
+        ///     Service for managing instructions of a method.
+        /// </param>
+        /// <param name="fieldReference">
+        ///     The backing field containing the state of the object.
+        /// </param>
+        /// <returns>
+        ///     The <see cref="Instruction" />s yielded.
+        /// </returns>
+        public static IEnumerable<Instruction> GetDisposeMethodPartialInstructions(ILProcessor ilProcessor,
                                                                                    FieldReference fieldReference)
         {
             // Push the instance on the stack
@@ -99,10 +110,10 @@
             yield return ilProcessor.Create(OpCodes.Stfld, fieldReference);
         }
 
-        public static IEnumerable<Instruction> GetSetIsDisposedFullInstructions(ILProcessor ilProcessor,
+        public static IEnumerable<Instruction> GetDisposeMethodFullInstructions(ILProcessor ilProcessor,
                                                                                 FieldReference fieldReference)
         {
-            foreach (var instruction in GetSetIsDisposedPartialInstructions(ilProcessor, fieldReference))
+            foreach (var instruction in GetDisposeMethodPartialInstructions(ilProcessor, fieldReference))
             {
                 yield return instruction;
             }
@@ -119,7 +130,12 @@
         /// <param name="methodReference">
         ///     The method that will be called.
         /// </param>
-        /// <returns></returns>
+        /// <param name="latestVariableInstruction">
+        ///     The <see cref="Instruction" /> representing the latest variable of the method.
+        /// </param>
+        /// <returns>
+        ///     The <see cref="Instruction" />s yielded.
+        /// </returns>
         public static IEnumerable<Instruction> GetCallMethodInstruction(ILProcessor ilProcessor,
                                                                         MethodReference methodReference,
                                                                         Instruction latestVariableInstruction)
@@ -148,12 +164,12 @@
         ///     The <see cref="MethodReference" /> of the local method to set to <see langword="True" /> the dispose field.
         /// </param>
         /// <returns>
-        ///     An <see cref="IEnumerable{T}" /> of the instructions.
+        ///     The <see cref="Instruction" />s yielded.
         /// </returns>
-        public static IEnumerable<Instruction> GetSetIsDisposedAsyncMethodInstructions(ILProcessor ilProcessor,
-                                                                                       MethodReference taskContinueWithMethodReference,
-                                                                                       MethodReference actionConstructionReference,
-                                                                                       MethodReference lambdaActionReference)
+        public static IEnumerable<Instruction> GetDisposeAsyncMethodInstructions(ILProcessor ilProcessor,
+                                                                                 MethodReference taskContinueWithMethodReference,
+                                                                                 MethodReference actionConstructionReference,
+                                                                                 MethodReference lambdaActionReference)
         {
             yield return ilProcessor.Create(OpCodes.Ldarg_1);
             yield return ilProcessor.Create(OpCodes.Ldarg_0);
