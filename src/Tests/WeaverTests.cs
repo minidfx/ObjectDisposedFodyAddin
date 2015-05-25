@@ -1,5 +1,4 @@
-﻿
-#pragma warning disable 1584,1711,1572,1581,1580
+﻿// ReSharper disable InconsistentNaming
 
 namespace Tests
 {
@@ -16,6 +15,338 @@ namespace Tests
     [TestFixture]
     public abstract class WeaverTests
     {
+        public abstract class with_valid_assembly : WeaverTests
+        {
+            #region Context
+
+            protected abstract dynamic GetInstance();
+
+            #endregion
+
+            public abstract class with_AssemblyToProcess : with_valid_assembly
+            {
+                public abstract class with_exceptions_expected : with_AssemblyToProcess
+                {
+                    [Test]
+                    [ExpectedException(typeof(ObjectDisposedException))]
+                    public void then_ObjectDisposedException_is_throwing_with_SayMeHelloWorld()
+                    {
+                        this.Instance.SayMeHelloWorld();
+                    }
+
+                    public abstract class with_Disposable_class : with_exceptions_expected
+                    {
+                        #region Context
+
+                        protected override dynamic GetInstance()
+                        {
+                            return this.CreateInstance("AssemblyToProcess.Disposable");
+                        }
+
+                        #endregion
+
+                        public sealed class when_Dispose_is_called : with_Disposable_class
+                        {
+                            #region Context
+
+                            protected override void MethodCalled()
+                            {
+                                this.Instance.Dispose();
+                            }
+
+                            #endregion
+
+                            [Test]
+                            [ExpectedException(typeof(ObjectDisposedException))]
+                            public void then_ObjectDisposedException_is_throwing_with_DoSomething()
+                            {
+                                this.Instance.DoSomething();
+                            }
+
+                            [Test]
+                            [ExpectedException(typeof(ObjectDisposedException))]
+                            public void then_ObjectDisposedException_is_throwing_with_DoNothing()
+                            {
+                                this.Instance.DoNothing();
+                            }
+                        }
+                    }
+
+                    public abstract class with_DisposableChild_class : with_exceptions_expected
+                    {
+                        #region Context
+
+                        protected override dynamic GetInstance()
+                        {
+                            return this.CreateInstance("AssemblyToProcess.DisposableChild");
+                        }
+
+                        #endregion
+
+                        public sealed class when_Dispose_is_called : with_DisposableChild_class
+                        {
+                            #region Context
+
+                            protected override void MethodCalled()
+                            {
+                                this.Instance.Dispose();
+                            }
+
+                            #endregion
+
+                            [Test]
+                            [ExpectedException(typeof(ObjectDisposedException))]
+                            public void then_ObjectDisposedException_is_throwing_with_DoSomething()
+                            {
+                                this.Instance.DoSomething();
+                            }
+                        }
+                    }
+
+                    public abstract class with_DiposableChildWithOverride_class : with_exceptions_expected
+                    {
+                        #region Context
+
+                        protected override dynamic GetInstance()
+                        {
+                            return this.CreateInstance("AssemblyToProcess.DisposableChild");
+                        }
+
+                        #endregion
+
+                        public sealed class when_Dispose_is_called : with_DiposableChildWithOverride_class
+                        {
+                            #region Context
+
+                            protected override void MethodCalled()
+                            {
+                                this.Instance.Dispose();
+                            }
+
+                            #endregion
+                        }
+                    }
+
+                    public abstract class with_AsyncDisposable_class : with_exceptions_expected
+                    {
+                        #region Context
+
+                        protected override dynamic GetInstance()
+                        {
+                            return this.CreateInstance("AssemblyToProcess.AsyncDisposable");
+                        }
+
+                        #endregion
+
+                        public sealed class when_DisposeAsync_is_called : with_AsyncDisposable_class
+                        {
+                            #region Context
+
+                            protected override void MethodCalled()
+                            {
+                                this.Instance.DisposeAsync().Wait();
+                            }
+
+                            #endregion
+
+                            [Test]
+                            [ExpectedException(typeof(ObjectDisposedException))]
+                            public void then_ObjectDisposedException_is_throwing_with_DoSomethingAsync()
+                            {
+                                this.Instance.DoSomethingAsync();
+                            }
+                        }
+                    }
+
+                    public abstract class with_AsyncDisposableChild_class : with_exceptions_expected
+                    {
+                        #region Context
+
+                        protected override dynamic GetInstance()
+                        {
+                            return this.CreateInstance("AssemblyToProcess.AsyncDisposableChild");
+                        }
+
+                        #endregion
+
+                        public sealed class when_DisposeAsync_is_called : with_AsyncDisposableChild_class
+                        {
+                            #region Context
+
+                            protected override void MethodCalled()
+                            {
+                                this.Instance.DisposeAsync().Wait(); // Wait for the task is completely finished.
+                            }
+
+                            #endregion
+
+                            [Test]
+                            [ExpectedException(typeof(ObjectDisposedException))]
+                            public void then_ObjectDisposedException_is_throwing_with_DoSomething()
+                            {
+                                this.Instance.DoSomething();
+                            }
+                        }
+                    }
+
+                    public abstract class with_AsyncDisposableWithAwait_class : with_exceptions_expected
+                    {
+                        #region Context
+
+                        protected override dynamic GetInstance()
+                        {
+                            return this.CreateInstance("AssemblyToProcess.AsyncDisposableWithAwait");
+                        }
+
+                        #endregion
+
+                        public sealed class when_DisposeAsync_is_called : with_AsyncDisposableWithAwait_class
+                        {
+                            #region Context
+
+                            protected override void MethodCalled()
+                            {
+                                this.Instance.DisposeAsync().Wait(); // Wait for the task is completely finished.
+                            }
+
+                            #endregion
+                        }
+                    }
+
+                    public abstract class with_AsyncDisposableWithDelay_class_wait_for : with_exceptions_expected
+                    {
+                        #region Context
+
+                        protected override dynamic GetInstance()
+                        {
+                            return this.CreateInstance("AssemblyToProcess.AsyncDisposableWithDelay");
+                        }
+
+                        #endregion
+
+                        public sealed class when_DisposeAsync_is_called : with_AsyncDisposableWithDelay_class_wait_for
+                        {
+                            #region Context
+
+                            protected override void MethodCalled()
+                            {
+                                this.Instance.DisposeAsync().Wait();
+                            }
+
+                            #endregion
+                        }
+                    }
+
+                    public abstract class with_AsyncDisposableWithMultiTasks_class : with_exceptions_expected
+                    {
+                        #region Context
+
+                        protected override dynamic GetInstance()
+                        {
+                            return this.CreateInstance("AssemblyToProcess.AsyncDisposableWithMultiTasks");
+                        }
+
+                        #endregion
+
+                        public sealed class when_DisposeAsync_is_called : with_AsyncDisposableWithMultiTasks_class
+                        {
+                            #region Context
+
+                            protected override void MethodCalled()
+                            {
+                                this.Instance.DisposeAsync().Wait();
+                            }
+
+                            #endregion
+
+                            [Test]
+                            [ExpectedException(typeof(ObjectDisposedException))]
+                            public void then_ObjectDisposedException_is_throwing_with_DoSomething()
+                            {
+                                this.Instance.DoSomething();
+                            }
+                        }
+                    }
+                }
+
+                public abstract class with_AsyncDisposableWithDelay_class : with_AssemblyToProcess
+                {
+                    #region Context
+
+                    protected override dynamic GetInstance()
+                    {
+                        return this.CreateInstance("AssemblyToProcess.AsyncDisposableWithDelay");
+                    }
+
+                    #endregion
+
+                    public sealed class when_DisposeAsync_is_called : with_AsyncDisposableWithDelay_class
+                    {
+                        #region Context
+
+                        protected override void MethodCalled()
+                        {
+                            this.Instance.DisposeAsync();
+                        }
+
+                        #endregion
+
+                        [Test]
+                        public void then_SayMeHello_equals_Hello()
+                        {
+                            Assert.AreEqual("Hello", this.Instance.SayMeHello());
+                        }
+                    }
+                }
+
+                public abstract class with_DisposableWithoutGuard_class : with_AssemblyToProcess
+                {
+                    #region Context
+
+                    protected override dynamic GetInstance()
+                    {
+                        return this.CreateInstance("AssemblyToProcess.DisposableWithoutGuard");
+                    }
+
+                    #endregion
+
+                    public sealed class when_Dispose_is_called : with_DisposableWithoutGuard_class
+                    {
+                        #region Context
+
+                        protected override void MethodCalled()
+                        {
+                            this.Instance.Dispose();
+                        }
+
+                        #endregion
+
+                        [Test]
+                        public void then_Result_equals_to_Hello_World()
+                        {
+                            Assert.AreEqual("Hello World!", this.Instance.SayMeHelloWorld());
+                        }
+                    }
+                }
+
+                #region Context
+
+                [SetUp]
+                public virtual void SetUp()
+                {
+                    this.TryToLoadAssembly(Path.Combine("..", "..", "..", "AssemblyToProcess", "AssemblyToProcess.csproj"));
+                    this.Instance = this.GetInstance();
+                    this.MethodCalled();
+                }
+
+                protected abstract void MethodCalled();
+
+                #endregion
+            }
+        }
+
+        #region Context
+
         private static Assembly newAssembly;
 
         protected dynamic Instance { get; private set; }
@@ -65,352 +396,12 @@ namespace Tests
             newAssembly = Assembly.LoadFile(newAssemblyPath);
         }
 
-        protected dynamic CreateInstance(string className)
+        protected dynamic CreateInstance(string className,
+                                         params object[] args)
         {
-            return Activator.CreateInstance(newAssembly.GetType(className, true));
+            return Activator.CreateInstance(newAssembly.GetType(className, true), args);
         }
 
-        /// <summary>
-        ///     Try to load an assembly, which contains type with the interface IDisposable and IAsyncDisposable.
-        /// </summary>
-        public sealed class WithBothInterfaces : WeaverTests
-        {
-            [Test]
-            public void LoadAssembly()
-            {
-                var exception = Assert.Throws<WeavingException>(() => this.TryToLoadAssembly(Path.Combine("..", "..", "..", "AssemblyToProcessWithInvalidType2", "AssemblyToProcessWithInvalidType2.csproj")));
-                Assert.AreEqual(WeavingErrorCodes.ContainsBothInterface, exception.ErrorCode);
-            }
-        }
-
-        /// <summary>
-        ///     Try to load an assembly, which contains type with the interface IDisposable and IAsyncDisposable.
-        /// </summary>
-        public sealed class WithDisposableWithIsDisposedMember : WeaverTests
-        {
-            [Test]
-            public void LoadAssembly()
-            {
-                var exception = Assert.Throws<WeavingException>(() => this.TryToLoadAssembly(Path.Combine("..", "..", "..", "AssemblyToProcessWithInvalidType", "AssemblyToProcessWithInvalidType.csproj")));
-                Assert.AreEqual(WeavingErrorCodes.NotUseable, exception.ErrorCode);
-            }
-        }
-
-        /// <summary>
-        ///     Try to load an assembly, which contains type with the interface IDisposable and IAsyncDisposable.
-        /// </summary>
-        public sealed class WithDisposableWithoutKeywordVirtualOnBaseClasses : WeaverTests
-        {
-            [Test]
-            public void LoadAssembly()
-            {
-                var exception = Assert.Throws<WeavingException>(() => this.TryToLoadAssembly(Path.Combine("..", "..", "..", "AssemblyToProcessWithInvalidType3", "AssemblyToProcessWithInvalidType3.csproj")));
-                Assert.AreEqual(WeavingErrorCodes.MustHaveVirtualKeyword, exception.ErrorCode);
-            }
-        }
-
-        /// <summary>
-        ///     Load an assembly with valid rules.
-        /// </summary>
-        public abstract class WithValidAssembly : WeaverTests
-        {
-            protected abstract dynamic GetInstance();
-
-            [SetUp]
-            public virtual void SetUp()
-            {
-                this.Instance = this.GetInstance();
-            }
-
-            [TestFixtureSetUp]
-            public void FixtureSetUp()
-            {
-                this.TryToLoadAssembly(Path.Combine("..", "..", "..", "AssemblyToProcess", "AssemblyToProcess.csproj"));
-            }
-
-            public abstract class WithDisposableChild : WithValidAssembly
-            {
-                protected override dynamic GetInstance()
-                {
-                    return this.CreateInstance("AssemblyToProcess.DisposableChild");
-                }
-
-                [Test]
-                public void HasIsDisposedField()
-                {
-                    var isDisposedField = this.Instance.GetType().GetField("isDisposed", BindingFlags.NonPublic | BindingFlags.Instance);
-                    Assert.IsNotNull(isDisposedField);
-                }
-
-                public sealed class WithCallToDispose : WithDisposableChild
-                {
-                    [SetUp]
-                    public override void SetUp()
-                    {
-                        base.SetUp();
-
-                        this.Instance.Dispose();
-                    }
-
-                    [Test]
-                    [ExpectedException(typeof(ObjectDisposedException))]
-                    public void CallSayMeHelloWorld()
-                    {
-                        var result = this.Instance.SayMeHelloWorld();
-                        Assert.AreEqual("Hello World!", result);
-                    }
-                }
-            }
-
-            public abstract class WithAsyncDisposableChild : WithValidAssembly
-            {
-                protected override dynamic GetInstance()
-                {
-                    return this.CreateInstance("AssemblyToProcess.AsyncDisposableChild");
-                }
-
-                [Test]
-                public void HasIsDisposedField()
-                {
-                    var isDisposedField = this.Instance.GetType().GetField("isDisposed", BindingFlags.NonPublic | BindingFlags.Instance);
-                    Assert.IsNotNull(isDisposedField);
-                }
-
-                public sealed class WithCallToDispose : WithAsyncDisposableChild
-                {
-                    [SetUp]
-                    public override void SetUp()
-                    {
-                        base.SetUp();
-
-                        this.Instance.DisposeAsync().Wait();
-                    }
-
-                    [Test]
-                    [ExpectedException(typeof(ObjectDisposedException))]
-                    public void CallSayMeHelloWorld()
-                    {
-                        var result = this.Instance.SayMeHelloWorld();
-                        Assert.AreEqual("Hello World!", result);
-                    }
-                }
-            }
-
-            public abstract class WithAnotherInterfaceDisposable : WithValidAssembly
-            {
-                protected override dynamic GetInstance()
-                {
-                    return this.CreateInstance("AssemblyToProcess.DisposableWithAnotherInterfaceDisposable");
-                }
-
-                [Test]
-                public void HasIsDisposedField()
-                {
-                    var isDisposedField = this.Instance.GetType().GetField("isDisposed", BindingFlags.NonPublic | BindingFlags.Instance);
-                    Assert.IsNotNull(isDisposedField);
-                }
-
-                public sealed class WithCallToDispose : WithAnotherInterfaceDisposable
-                {
-                    [SetUp]
-                    public override void SetUp()
-                    {
-                        base.SetUp();
-
-                        this.Instance.Dispose();
-                    }
-
-                    [Test]
-                    [ExpectedException(typeof(ObjectDisposedException))]
-                    public void CallSayMeHelloWorld()
-                    {
-                        var result = this.Instance.SayMeHelloWorld();
-                        Assert.AreEqual("Hello World!", result);
-                    }
-                }
-            }
-
-            public abstract class WithAsyncDisposableWithAwait : WithValidAssembly
-            {
-                protected override dynamic GetInstance()
-                {
-                    return this.CreateInstance("AssemblyToProcess.AsyncDisposableWithAwait");
-                }
-
-                /// <summary>
-                ///     Unit tests when the AsyncDispose method has been called.
-                /// </summary>
-                public sealed class WithCallToDispose : WithAsyncDisposableClass
-                {
-                    [SetUp]
-                    public override void SetUp()
-                    {
-                        base.SetUp();
-
-                        this.Instance.DisposeAsync().Wait();
-                    }
-
-                    [Test]
-                    [ExpectedException(typeof(ObjectDisposedException))]
-                    public void CallSayMeHelloWorld()
-                    {
-                        var result = this.Instance.SayMeHelloWorld();
-                        Assert.AreEqual("Hello World!", result);
-                    }
-                }
-            }
-
-            /// <summary>
-            ///     Contains unit tests for the <see cref="AsyncDisposable" /> class.
-            /// </summary>
-            public abstract class WithAsyncDisposableClass : WithValidAssembly
-            {
-                protected override dynamic GetInstance()
-                {
-                    return this.CreateInstance("AssemblyToProcess.AsyncDisposable");
-                }
-
-                [Test]
-                public void HasIsDisposedField()
-                {
-                    var isDisposedField = this.Instance.GetType().GetField("isDisposed", BindingFlags.NonPublic | BindingFlags.Instance);
-                    Assert.IsNotNull(isDisposedField);
-                }
-
-                /// <summary>
-                ///     Unit tests when the AsyncDispose method has not been called.
-                /// </summary>
-                public sealed class WithNoCallToDispose : WithAsyncDisposableClass
-                {
-                    [Test]
-                    public void CallSayMeHelloWorld()
-                    {
-                        var result = this.Instance.SayMeHelloWorld();
-                        Assert.AreEqual("Hello World!", result);
-                    }
-                }
-
-                /// <summary>
-                ///     Unit tests when the AsyncDispose method has been called.
-                /// </summary>
-                public sealed class WithCallToDispose : WithAsyncDisposableClass
-                {
-                    [SetUp]
-                    public override void SetUp()
-                    {
-                        base.SetUp();
-
-                        this.Instance.DisposeAsync().Wait();
-                    }
-
-                    [Test]
-                    [ExpectedException(typeof(ObjectDisposedException))]
-                    public void CallDoSomethingAsync()
-                    {
-                        this.Instance.DoSomethingAsync().Wait();
-                    }
-                }
-            }
-
-            public abstract class WithDisposableWithoutGuardClass : WithValidAssembly
-            {
-                protected override dynamic GetInstance()
-                {
-                    return this.CreateInstance("AssemblyToProcess.DisposableWithoutGuard");
-                }
-
-                [Test]
-                public void HasNotIsDisposedField()
-                {
-                    var isDisposedField = this.Instance.GetType().GetField("isDisposed", BindingFlags.NonPublic | BindingFlags.Instance);
-                    Assert.IsNull(isDisposedField);
-                }
-
-                public sealed class WithCallToDispose : WithDisposableWithoutGuardClass
-                {
-                    [SetUp]
-                    public override void SetUp()
-                    {
-                        base.SetUp();
-
-                        this.Instance.Dispose();
-                    }
-
-                    [Test]
-                    public void CallSayMeHelloWorld()
-                    {
-                        var result = this.Instance.SayMeHelloWorld();
-                        Assert.AreEqual("Hello World!", result);
-                    }
-                }
-            }
-
-            /// <summary>
-            ///     Contains unit tests for the <see cref="Disposable" /> class.
-            /// </summary>
-            public abstract class WithDisposableClass : WithValidAssembly
-            {
-                protected override dynamic GetInstance()
-                {
-                    return this.CreateInstance("AssemblyToProcess.Disposable");
-                }
-
-                [Test]
-                public void HasIsDisposedField()
-                {
-                    var isDisposedField = this.Instance.GetType().GetField("isDisposed", BindingFlags.NonPublic | BindingFlags.Instance);
-                    Assert.IsNotNull(isDisposedField);
-                }
-
-                /// <summary>
-                ///     Unit tests when the Dispose method has not been called.
-                /// </summary>
-                public sealed class WithNoCallToDispose : WithDisposableClass
-                {
-                    [Test]
-                    public void CallSayMeHelloWorld()
-                    {
-                        var result = this.Instance.SayMeHelloWorld();
-                        Assert.AreEqual("Hello World!", result);
-                    }
-
-                    [Test]
-                    public void AccessToAPublicText()
-                    {
-                        var result = this.Instance.APublicText;
-                        Assert.AreEqual("Hello World!", result);
-                    }
-                }
-
-                /// <summary>
-                ///     Unit tests when the Dispose method has been called.
-                /// </summary>
-                public sealed class WithCallToDispose : WithDisposableClass
-                {
-                    [SetUp]
-                    public override void SetUp()
-                    {
-                        base.SetUp();
-
-                        this.Instance.Dispose();
-                    }
-
-                    [Test]
-                    [ExpectedException(typeof(ObjectDisposedException))]
-                    public void CallDoSomething()
-                    {
-                        this.Instance.DoSomething();
-                    }
-
-                    [Test]
-                    [ExpectedException(typeof(ObjectDisposedException))]
-                    public void AccessToAPublicText()
-                    {
-                        // ReSharper disable once UnusedVariable
-                        var result = this.Instance.APublicText;
-                    }
-                }
-            }
-        }
+        #endregion
     }
 }

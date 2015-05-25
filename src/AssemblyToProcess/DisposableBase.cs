@@ -7,5 +7,10 @@
         public virtual void Dispose()
         {
         }
+
+        public void DoSomething()
+        {
+            Console.WriteLine("Yuhuu!");
+        }
     }
 }

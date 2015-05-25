@@ -44,6 +44,9 @@
     <Compile Include="AsyncDisposableBase.cs" />
     <Compile Include="AsyncDisposableChild.cs" />
     <Compile Include="AsyncDisposableWithAwait.cs" />
+    <Compile Include="AsyncDisposableWithDelay.cs" />
+    <Compile Include="AsyncDisposableWithMultiTasks.cs" />
+    <Compile Include="DiposableChildWithOverride.cs" />
     <Compile Include="Disposable.cs" />
     <Compile Include="DisposableBase.cs" />
     <Compile Include="DisposableChild.cs" />
