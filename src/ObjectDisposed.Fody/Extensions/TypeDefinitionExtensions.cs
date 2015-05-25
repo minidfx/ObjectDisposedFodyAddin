@@ -8,8 +8,46 @@
     using Mono.Cecil.Cil;
     using Mono.Cecil.Rocks;
 
+    /// <summary>
+    ///     Contains extension methods for the any <see cref="TypeDefinition" />.
+    /// </summary>
     public static class TypeDefinitionExtensions
     {
+        /// <summary>
+        ///     Determines whether the type <paramref name="typeDefinition" /> contains the a field with the name isDisposed.
+        /// </summary>
+        /// <param name="typeDefinition">
+        ///     The <see cref="TypeDefinition" /> that will be extended.
+        /// </param>
+        /// <returns>
+        ///     <see langword="True" /> whether the type contains the field otherwise <see langword="False" />.
+        /// </returns>
+        public static bool ContainsIsDisposeField(this TypeDefinition typeDefinition)
+        {
+            return typeDefinition.Fields.Any(x => x.Name == "isDisposed");
+        }
+
+        /// <summary>
+        ///     Creates and adds a field into the <paramref name="typeDefinition" />.
+        /// </summary>
+        /// <param name="typeDefinition">
+        ///     The <see cref="TypeDefinition" /> that will be extended.
+        /// </param>
+        /// <param name="name">
+        ///     The name of the field.
+        /// </param>
+        /// <param name="fieldAttributes">
+        ///     <see cref="FieldAttributes" /> that describe the new field.
+        /// </param>
+        /// <param name="returnTypeReference">
+        ///     The <see cref="TypeReference" /> of the field.
+        /// </param>
+        /// <param name="customAttributes">
+        ///     <see cref="CustomAttribute" /> that will be apply on the field.
+        /// </param>
+        /// <returns>
+        ///     The <see cref="FieldReference" /> of the field.
+        /// </returns>
         public static FieldReference CreateField(this TypeDefinition typeDefinition,
                                                  string name,
                                                  FieldAttributes fieldAttributes,
@@ -162,6 +200,24 @@
             return false;
         }
 
+        /// <summary>
+        ///     Generic method for fetching base type of the <paramref name="typeDefinition" />.
+        /// </summary>
+        /// <typeparam name="T">
+        ///     The output type of the method.
+        /// </typeparam>
+        /// <param name="typeDefinition">
+        ///     The <see cref="Type" /> that we want to extend.
+        /// </param>
+        /// <param name="predicate">
+        ///     Predicate determining the result expected.
+        /// </param>
+        /// <param name="returnResultFunction">
+        ///     <see cref="Func{T,TResult}" /> for formatting the result.
+        /// </param>
+        /// <returns>
+        ///     The result formatted in according to the <paramref name="returnResultFunction" />.
+        /// </returns>
         private static T FetchBases<T>(this TypeDefinition typeDefinition,
                                        Predicate<TypeDefinition> predicate,
                                        Func<TypeDefinition, T> returnResultFunction)
@@ -181,6 +237,15 @@
             return default(T);
         }
 
+        /// <summary>
+        ///     Fetchs and returns the IsDisposed property.
+        /// </summary>
+        /// <param name="typeDefinition">
+        ///     The <see cref="Type" /> that we want to extend.
+        /// </param>
+        /// <returns>
+        ///     The property found otherwise null.
+        /// </returns>
         public static PropertyDefinition GetIsDisposedBaseProperty(this TypeDefinition typeDefinition)
         {
             Func<PropertyDefinition, bool> predicate = p => p.Name == "IsDisposed";
@@ -197,6 +262,15 @@
             return null;
         }
 
+        /// <summary>
+        ///     Fetchs and returns the Dispose method.
+        /// </summary>
+        /// <param name="typeDefinition">
+        ///     The <see cref="Type" /> that we want to extend.
+        /// </param>
+        /// <returns>
+        ///     The <see cref="MethodReference" /> representing the method otherwise null.
+        /// </returns>
         public static MethodReference GetSyncBaseDisposable(this TypeDefinition typeDefinition)
         {
             Func<MethodDefinition, bool> predicate = x => (x.Name == "Dispose") &&
@@ -210,6 +284,33 @@
                        : null;
         }
 
+        /// <summary>
+        ///     Creats and adds a property to the <paramref name="typeDefinition" />.
+        /// </summary>
+        /// <param name="typeDefinition">
+        ///     The <see cref="Type" /> that we want to extend.
+        /// </param>
+        /// <param name="name">
+        ///     The property name.
+        /// </param>
+        /// <param name="basePropertyGetterReference">
+        ///     The base getter of the property.
+        /// </param>
+        /// <param name="backingFieldReference">
+        ///     The backing field containing the state of the object.
+        /// </param>
+        /// <param name="propertyTypeReference">
+        ///     The type of the property.
+        /// </param>
+        /// <param name="voidTypeReference">
+        ///     The system void type reference.
+        /// </param>
+        /// <param name="customAttributes">
+        ///     The <see cref="CustomAttribute" /> that will be apply on the property.
+        /// </param>
+        /// <returns>
+        ///     The <see cref="PropertyDefinition" /> of the new property created.
+        /// </returns>
         public static PropertyDefinition CreateProperty(this TypeDefinition typeDefinition,
                                                         string name,
                                                         MethodReference basePropertyGetterReference,
@@ -221,6 +322,33 @@
             return typeDefinition.CreateOverrideProperty(name, null, backingFieldReference, propertyTypeReference, voidTypeReference, customAttributes);
         }
 
+        /// <summary>
+        ///     Creates and adds an override on a property.
+        /// </summary>
+        /// <param name="typeDefinition">
+        ///     The <see cref="Type" /> that we want to extend.
+        /// </param>
+        /// <param name="name">
+        ///     The name of the property.
+        /// </param>
+        /// <param name="basePropertyDefinition">
+        ///     The base <see cref="PropertyDefinition" />.
+        /// </param>
+        /// <param name="backingFieldReference">
+        ///     The backing field of the property.
+        /// </param>
+        /// <param name="propertyTypeReference">
+        ///     The type of the property.
+        /// </param>
+        /// <param name="voidTypeReference">
+        ///     The system void type reference.
+        /// </param>
+        /// <param name="customAttributes">
+        ///     The <see cref="CustomAttribute" /> that will be apply on the property.
+        /// </param>
+        /// <returns>
+        ///     The <see cref="PropertyDefinition" /> of the new property created.
+        /// </returns>
         public static PropertyDefinition CreateOverrideProperty(this TypeDefinition typeDefinition,
                                                                 string name,
                                                                 PropertyDefinition basePropertyDefinition,
@@ -272,6 +400,15 @@
             return getter;
         }
 
+        /// <summary>
+        ///     Adds the instructions into any public methods of the <paramref name="typeDefinition" />.
+        /// </summary>
+        /// <param name="typeDefinition">
+        ///     The <see cref="Type" /> that we want to extend.
+        /// </param>
+        /// <param name="objectDisposedExceptionConstructor">
+        ///     The constructor reference for throwing the exception <see cref="ObjectDisposedException" />.
+        /// </param>
         public static void AddGuardInstructions(this TypeDefinition typeDefinition,
                                                 MethodReference objectDisposedExceptionConstructor)
         {

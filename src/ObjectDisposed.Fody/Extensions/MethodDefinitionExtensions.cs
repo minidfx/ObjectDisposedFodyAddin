@@ -2,7 +2,6 @@
 {
     using System;
     using System.CodeDom.Compiler;
-    using System.Collections.Generic;
     using System.Linq;
     using System.Runtime.CompilerServices;
     using System.Threading.Tasks;
@@ -11,25 +10,11 @@
     using Mono.Cecil.Cil;
     using Mono.Cecil.Rocks;
 
+    /// <summary>
+    ///     Contains extension methods for the any <see cref="MethodReference" />.
+    /// </summary>
     public static class MethodDefinitionExtensions
     {
-        /// <remarks>
-        ///     How to create an override method : http://stackoverflow.com/a/8103611
-        /// </remarks>
-        public static void CreateOverride(this MethodReference methodReference,
-                                          TypeDefinition typeDefinition,
-                                          IEnumerable<Instruction> instructions)
-        {
-            const MethodAttributes OverrideMethodAttributes = MethodAttributes.Public | MethodAttributes.Virtual | MethodAttributes.ReuseSlot | MethodAttributes.HideBySig;
-
-            var newMethod = new MethodDefinition(methodReference.Name, OverrideMethodAttributes, methodReference.ReturnType);
-            var ilProcessor = newMethod.Body.GetILProcessor();
-
-            ilProcessor.AppendRange(instructions);
-
-            typeDefinition.Methods.Add(newMethod);
-        }
-
         /// <summary>
         ///     Continues the <see cref="Task" /> with an operation to set to disposed the object.
         /// </summary>

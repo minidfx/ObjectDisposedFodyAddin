@@ -116,6 +116,11 @@
 
                 if (disposeMethod != null)
                 {
+                    if (type.ContainsIsDisposeField())
+                    {
+                        throw new WeavingException(string.Format("The type {0} already contains a field isDisposed.", type.Name), WeavingErrorCodes.ContainsIsDisposedField);
+                    }
+
                     // Create the isDisposed field
                     var backingDisposeField = type.CreateField("isDisposed", FieldAttributes.Private, typeSystem.Boolean, new[] { generatedCodeCustomAttribute });
 
@@ -145,6 +150,11 @@
 
                 if (disposeAsyncMethod != null)
                 {
+                    if (asyncType.ContainsIsDisposeField())
+                    {
+                        throw new WeavingException(string.Format("The type {0} already contains a field isDisposed.", asyncType.Name), WeavingErrorCodes.ContainsIsDisposedField);
+                    }
+
                     // Create the isDisposed field
                     var backingDisposeField = asyncType.CreateField("isDisposed", FieldAttributes.Private, typeSystem.Boolean, new[] { generatedCodeCustomAttribute });
 

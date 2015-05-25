@@ -345,6 +345,69 @@ namespace Tests
             }
         }
 
+        public abstract class with_invalid_assembly : WeaverTests
+        {
+            [Test]
+            public void then_load_assembly_failed()
+            {
+                var exception = Assert.Throws<WeavingException>(() => { this.TryToLoadAssembly(Path.Combine("..", "..", "..", this.ProjectName, this.ProjectName + ".csproj")); });
+                Assert.AreEqual(this.ExpectedErrorCode, exception.ErrorCode);
+            }
+
+            public sealed class with_AssemblyToProcessWithInvalidType : with_invalid_assembly
+            {
+                #region Context
+
+                protected override WeavingErrorCodes EstablishErrorCode()
+                {
+                    return WeavingErrorCodes.ContainsIsDisposedField;
+                }
+
+                protected override string EstablishProjectName()
+                {
+                    return "AssemblyToProcessWithInvalidType";
+                }
+
+                #endregion
+            }
+
+            public sealed class with_AssemblyToProcessWithInvalidType2 : with_invalid_assembly
+            {
+                #region Context
+
+                protected override WeavingErrorCodes EstablishErrorCode()
+                {
+                    return WeavingErrorCodes.ContainsBothInterface;
+                }
+
+                protected override string EstablishProjectName()
+                {
+                    return "AssemblyToProcessWithInvalidType2";
+                }
+
+                #endregion
+            }
+
+            #region Context
+
+            protected WeavingErrorCodes ExpectedErrorCode { get; private set; }
+
+            protected abstract WeavingErrorCodes EstablishErrorCode();
+
+            protected string ProjectName { get; private set; }
+
+            protected abstract string EstablishProjectName();
+
+            [SetUp]
+            public void SetUp()
+            {
+                this.ProjectName = this.EstablishProjectName();
+                this.ExpectedErrorCode = this.EstablishErrorCode();
+            }
+
+            #endregion
+        }
+
         #region Context
 
         private static Assembly newAssembly;
