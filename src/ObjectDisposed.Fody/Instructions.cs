@@ -33,7 +33,7 @@
         /// </returns>
         public static IEnumerable<Instruction> GetGuardInstructions(ILProcessor ilProcessor,
                                                                     MemberReference memberReference,
-                                                                    PropertyDefinition isDisposedPropertyDefinition,
+                                                                    MethodReference isDisposedPropertyDefinition,
                                                                     MethodReference objectDisposedExceptionReference)
         {
             var normalWay = ilProcessor.Body.Instructions.FirstOrDefault() ?? ilProcessor.Create(OpCodes.Ret);
@@ -42,7 +42,7 @@
             yield return ilProcessor.Create(OpCodes.Ldarg_0);
 
             // Call the parent method
-            yield return ilProcessor.Create(OpCodes.Call, isDisposedPropertyDefinition.GetMethod);
+            yield return ilProcessor.Create(OpCodes.Call, isDisposedPropertyDefinition);
 
             // Branch to the normal way whether the value on the stack is equals to 0
             yield return ilProcessor.Create(OpCodes.Brfalse_S, normalWay);
@@ -58,31 +58,45 @@
         }
 
         public static IEnumerable<Instruction> GetIsDisposedInstructionsGetter(ILProcessor ilProcessor,
-                                                                               PropertyDefinition basePropertyDefinition,
-                                                                               FieldReference disposeFieldReference)
+                                                                               MethodReference basePropertyGetterReference,
+                                                                               FieldReference backingFieldReference)
         {
-            yield return ilProcessor.Create(OpCodes.Ldarg_0); // Load the field isDisposed
-            yield return ilProcessor.Create(OpCodes.Ldfld, disposeFieldReference); // Push the field value on the stack
-
-            if (basePropertyDefinition != null)
+            if (backingFieldReference != null)
             {
-                var push0OnStack = ilProcessor.Create(OpCodes.Ldc_I4_0);
+                yield return ilProcessor.Create(OpCodes.Ldarg_0); // Load the field isDisposed
+                yield return ilProcessor.Create(OpCodes.Ldfld, backingFieldReference); // Push the field value on the stack
+            }
 
-                // Branch to the instruction whether the value on the stack is equals to 0
-                yield return ilProcessor.Create(OpCodes.Brfalse_S, push0OnStack);
+            if (basePropertyGetterReference != null)
+            {
+                Instruction push0OnStack = null;
+
+                if (backingFieldReference != null)
+                {
+                    push0OnStack = ilProcessor.Create(OpCodes.Ldc_I4_0);
+
+                    // Branch to the instruction whether the value on the stack is equals to 0
+                    yield return ilProcessor.Create(OpCodes.Brfalse_S, push0OnStack);
+                }
 
                 // Call the base property
                 yield return ilProcessor.Create(OpCodes.Ldarg_0);
-                yield return ilProcessor.Create(OpCodes.Call, basePropertyDefinition.GetMethod);
+                yield return ilProcessor.Create(OpCodes.Call, basePropertyGetterReference);
 
                 // Exit the method whether the base property has been called.
                 yield return ilProcessor.Create(OpCodes.Ret);
 
-                // Push the field value on the stack
-                yield return push0OnStack;
+                if (push0OnStack != null)
+                {
+                    // Push the field value on the stack
+                    yield return push0OnStack;
+                }
             }
 
-            yield return ilProcessor.Create(OpCodes.Ret);
+            if (backingFieldReference != null)
+            {
+                yield return ilProcessor.Create(OpCodes.Ret);
+            }
         }
 
         /// <summary>
@@ -110,8 +124,8 @@
             yield return ilProcessor.Create(OpCodes.Stfld, fieldReference);
         }
 
-        public static IEnumerable<Instruction> GetDisposeMethodFullInstructions(ILProcessor ilProcessor,
-                                                                                FieldReference fieldReference)
+        public static IEnumerable<Instruction> GetSetToDisposeFullInstructions(ILProcessor ilProcessor,
+                                                                               FieldReference fieldReference)
         {
             foreach (var instruction in GetDisposeMethodPartialInstructions(ilProcessor, fieldReference))
             {
@@ -121,28 +135,67 @@
             yield return ilProcessor.Create(OpCodes.Ret);
         }
 
+        public static IEnumerable<Instruction> GetDisposeMethodFullInstructions(ILProcessor ilProcessor,
+                                                                                MethodReference baseMethodReference,
+                                                                                FieldReference fieldReference)
+        {
+            yield return ilProcessor.Create(OpCodes.Ldarg_0);
+            yield return ilProcessor.Create(OpCodes.Call, baseMethodReference);
+
+            foreach (var instruction in GetDisposeMethodPartialInstructions(ilProcessor, fieldReference))
+            {
+                yield return instruction;
+            }
+
+            yield return ilProcessor.Create(OpCodes.Ret);
+        }
+
         /// <summary>
-        ///     Yields <see cref="Instruction" /> to call the <see cref="MethodReference" /> <paramref name="methodReference" />.
+        ///     Yields <see cref="Instruction" />s for calling the
+        ///     <see cref="Task.ContinueWith(System.Action{System.Threading.Tasks.Task})" /> and returns the <see cref="Task" /> of
+        ///     the <see cref="Task.ContinueWith(System.Action{System.Threading.Tasks.Task})" /> method.
         /// </summary>
         /// <param name="ilProcessor">
         ///     Service for managing instructions of a method.
         /// </param>
-        /// <param name="methodReference">
-        ///     The method that will be called.
+        /// <param name="taskContinueWithMethodReference">
+        ///     The <see cref="MethodReference" /> of the
+        ///     <see cref="Task.ContinueWith(System.Action{System.Threading.Tasks.Task})" /> method.
         /// </param>
-        /// <param name="latestVariableInstruction">
-        ///     The <see cref="Instruction" /> representing the latest variable of the method.
+        /// <param name="taskTypeReference">
+        ///     The <see cref="TypeReference" /> of a <see cref="Task" />.
         /// </param>
         /// <returns>
         ///     The <see cref="Instruction" />s yielded.
         /// </returns>
-        public static IEnumerable<Instruction> GetCallMethodInstruction(ILProcessor ilProcessor,
-                                                                        MethodReference methodReference,
-                                                                        Instruction latestVariableInstruction)
+        public static IEnumerable<Instruction> GetPartialContinueWithInstructions(ILProcessor ilProcessor,
+                                                                                  MethodReference taskContinueWithMethodReference,
+                                                                                  TypeReference taskTypeReference)
+        {
+            var variable = new VariableDefinition(taskTypeReference);
+            ilProcessor.Body.Variables.Add(variable);
+            ilProcessor.Body.InitLocals = true;
+
+            yield return ilProcessor.Create(OpCodes.Stloc, variable);
+            yield return ilProcessor.Create(OpCodes.Ldarg_0);
+            yield return ilProcessor.Create(OpCodes.Ldloc, variable);
+            yield return ilProcessor.Create(OpCodes.Call, taskContinueWithMethodReference);
+        }
+
+        public static IEnumerable<Instruction> GetFullContinueWithInstructions(ILProcessor ilProcessor,
+                                                                               MethodReference taskContinueWithMethodReference,
+                                                                               MethodReference baseMethodReference,
+                                                                               TypeReference taskTypeReference)
         {
             yield return ilProcessor.Create(OpCodes.Ldarg_0);
-            yield return ilProcessor.Create(latestVariableInstruction.OpCode);
-            yield return ilProcessor.Create(OpCodes.Call, methodReference);
+            yield return ilProcessor.Create(OpCodes.Call, baseMethodReference);
+
+            foreach (var instruction in GetPartialContinueWithInstructions(ilProcessor, taskContinueWithMethodReference, taskTypeReference))
+            {
+                yield return instruction;
+            }
+
+            yield return ilProcessor.Create(OpCodes.Ret);
         }
 
         /// <summary>

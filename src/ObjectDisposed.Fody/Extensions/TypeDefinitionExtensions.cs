@@ -1,8 +1,10 @@
 ﻿namespace ObjectDisposedFodyAddin.Extensions
 {
     using System;
+    using System.CodeDom.Compiler;
     using System.Collections.Generic;
     using System.Linq;
+    using System.Runtime.CompilerServices;
 
     using Mono.Cecil;
     using Mono.Cecil.Cil;
@@ -90,12 +92,19 @@
                                                     string name,
                                                     MethodAttributes methodAttributes,
                                                     TypeReference returnTypeReference,
+                                                    IEnumerable<CustomAttribute> attribtues,
                                                     Func<ILProcessor, IEnumerable<Instruction>> instructions)
         {
             var newMethod = new MethodDefinition(name, methodAttributes, returnTypeReference);
             var ilProcessor = newMethod.Body.GetILProcessor();
 
             newMethod.Body.GetILProcessor().AppendRange(instructions(ilProcessor));
+
+            foreach (var customAttribute in attribtues)
+            {
+                newMethod.CustomAttributes.Add(customAttribute);
+            }
+
             typeDefinition.Methods.Add(newMethod);
 
             return newMethod;
@@ -118,11 +127,12 @@
             }
 
             if (typeDefinition.BaseType != null &&
-                typeDefinition.BaseType != typeDefinition.Module.TypeSystem.Object &&
-                typeDefinition.BaseType.IsDefinition)
+                typeDefinition.BaseType != typeDefinition.Module.TypeSystem.Object)
             {
+                var baseType = typeDefinition.Module.Import(typeDefinition.BaseType);
+
                 // ReSharper disable once TailRecursiveCall
-                return HasIAsyncDisposableInterface(typeDefinition.BaseType.Resolve());
+                return HasIAsyncDisposableInterface(baseType.Resolve());
             }
 
             return false;
@@ -152,9 +162,19 @@
         /// <returns>
         ///     <c>True</c> whether the type contains at least a dispose method otherwise <c>False</c>.
         /// </returns>
-        public static bool HasDisposeMethod(this TypeDefinition typeDefinition)
+        public static bool HasAnyDisposeMethod(this TypeDefinition typeDefinition)
         {
             return typeDefinition.HasMethods && typeDefinition.Methods.Any(x => x.Name == "Dispose" || x.Name == "DisposeAsync");
+        }
+
+        public static bool HasDisposeMethod(this TypeDefinition typeDefinition)
+        {
+            return typeDefinition.Methods.Any(x => x.Name == "Dispose");
+        }
+
+        public static bool HasDisposeAsyncMethod(this TypeDefinition typeDefinition)
+        {
+            return typeDefinition.Methods.Any(x => x.Name == "DisposeAsync");
         }
 
         /// <summary>
@@ -190,11 +210,12 @@
             }
 
             if (typeDefinition.BaseType != null &&
-                typeDefinition.BaseType != typeDefinition.Module.TypeSystem.Object &&
-                typeDefinition.BaseType.IsDefinition)
+                typeDefinition.BaseType != typeDefinition.Module.TypeSystem.Object)
             {
+                var baseType = typeDefinition.Module.Import(typeDefinition.BaseType);
+
                 // ReSharper disable once TailRecursiveCall
-                return HasIDisposableInterface(typeDefinition.BaseType.Resolve());
+                return HasIDisposableInterface(baseType.Resolve());
             }
 
             return false;
@@ -246,20 +267,15 @@
         /// <returns>
         ///     The property found otherwise null.
         /// </returns>
-        public static PropertyDefinition GetIsDisposedBaseProperty(this TypeDefinition typeDefinition)
+        public static MethodReference GetIsDisposedBasePropertyGetter(this TypeDefinition typeDefinition)
         {
             Func<PropertyDefinition, bool> predicate = p => p.Name == "IsDisposed";
             var baseProperty = typeDefinition.FetchBases(t => t.Properties.Any(predicate),
                                                          t => t.Properties.SingleOrDefault(predicate));
 
-            if (baseProperty != null)
-            {
-                typeDefinition.Module.Import(baseProperty.GetMethod);
-
-                return baseProperty;
-            }
-
-            return null;
+            return baseProperty != null
+                       ? ImporterService.Import(baseProperty.GetMethod)
+                       : null;
         }
 
         /// <summary>
@@ -280,7 +296,7 @@
                                                        t => t.Methods.SingleOrDefault(predicate));
 
             return baseMethod != null
-                       ? typeDefinition.Module.Import(baseMethod)
+                       ? ImporterService.Import(baseMethod)
                        : null;
         }
 
@@ -331,8 +347,8 @@
         /// <param name="name">
         ///     The name of the property.
         /// </param>
-        /// <param name="basePropertyDefinition">
-        ///     The base <see cref="PropertyDefinition" />.
+        /// <param name="basePropertyReferenceGetter">
+        ///     The base <see cref="MethodReference" /> of the parent type.
         /// </param>
         /// <param name="backingFieldReference">
         ///     The backing field of the property.
@@ -351,7 +367,7 @@
         /// </returns>
         public static PropertyDefinition CreateOverrideProperty(this TypeDefinition typeDefinition,
                                                                 string name,
-                                                                PropertyDefinition basePropertyDefinition,
+                                                                MethodReference basePropertyReferenceGetter,
                                                                 FieldReference backingFieldReference,
                                                                 TypeReference propertyTypeReference,
                                                                 TypeReference voidTypeReference,
@@ -362,11 +378,11 @@
             var attributes = MethodAttributes.Family | MethodAttributes.HideBySig |
                              MethodAttributes.SpecialName | MethodAttributes.Virtual;
 
-            attributes |= basePropertyDefinition == null
+            attributes |= basePropertyReferenceGetter == null
                               ? MethodAttributes.NewSlot
                               : MethodAttributes.ReuseSlot;
 
-            var getter = CreatePropertyGetter(getterName, attributes, basePropertyDefinition, propertyTypeReference, backingFieldReference);
+            var getter = CreatePropertyGetter(getterName, attributes, basePropertyReferenceGetter, propertyTypeReference, backingFieldReference);
 
             var newProperty = new PropertyDefinition(name, PropertyAttributes.Unused, propertyTypeReference)
                                   {
@@ -386,7 +402,7 @@
 
         private static MethodDefinition CreatePropertyGetter(string name,
                                                              MethodAttributes attributes,
-                                                             PropertyDefinition propertyDefinition,
+                                                             MethodReference propertyReferenceGetter,
                                                              TypeReference propertyType,
                                                              FieldReference backingFieldReference)
         {
@@ -394,7 +410,7 @@
 
             var ilProcessor = getter.Body.GetILProcessor();
 
-            var instructions = Instructions.GetIsDisposedInstructionsGetter(ilProcessor, propertyDefinition, backingFieldReference);
+            var instructions = Instructions.GetIsDisposedInstructionsGetter(ilProcessor, propertyReferenceGetter, backingFieldReference);
             ilProcessor.AppendRange(instructions);
 
             return getter;
@@ -409,8 +425,12 @@
         /// <param name="objectDisposedExceptionConstructor">
         ///     The constructor reference for throwing the exception <see cref="ObjectDisposedException" />.
         /// </param>
+        /// <param name="basePropertyReferenceGetter">
+        ///     The base <see cref="MethodReference" /> of the parent type.
+        /// </param>
         public static void AddGuardInstructions(this TypeDefinition typeDefinition,
-                                                MethodReference objectDisposedExceptionConstructor)
+                                                MethodReference objectDisposedExceptionConstructor,
+                                                MethodReference basePropertyReferenceGetter)
         {
             var methods = typeDefinition.Methods
                                         .Where(x => !x.IsStatic &&
@@ -420,10 +440,24 @@
                                                     !x.Name.Equals("DisposeAsync") &&
                                                     !x.Name.Equals(".ctor"));
 
-            var propertyIsDisposedGetter = typeDefinition.Properties.SingleOrDefault(x => x.Name == "IsDisposed")
-                                           ?? typeDefinition.GetIsDisposedBaseProperty();
+            MethodReference propertyIsDisposedGetter = null;
 
-            foreach (var method in methods)
+            if (typeDefinition.Properties.Any(x => x.Name == "IsDisposed"))
+            {
+                propertyIsDisposedGetter = typeDefinition.Properties.Single(x => x.Name == "IsDisposed").GetMethod;
+            }
+
+            if (propertyIsDisposedGetter == null)
+            {
+                propertyIsDisposedGetter = basePropertyReferenceGetter;
+            }
+
+            if (propertyIsDisposedGetter == null)
+            {
+                throw new WeavingException("Cannot find the property IsDisposed for determining whether the object is already disposed.", WeavingErrorCodes.PropertyNotFound);
+            }
+
+            foreach (var method in methods.Where(x => x.Body != null))
             {
                 var ilProcessor = method.Body.GetILProcessor();
                 var firstInstruction = method.Body.Instructions.First();
@@ -436,6 +470,21 @@
 
                 method.Body.OptimizeMacros();
             }
+        }
+
+        /// <summary>
+        ///     Determines whether a type has been generated by a tools.
+        /// </summary>
+        /// <param name="typeDefinition">
+        ///     The <see cref="Type" /> that we want to extend.
+        /// </param>
+        /// <returns>
+        ///     <c>True</c> whether the type contains the attribute <see cref="CompilerGeneratedAttribute" /> or
+        ///     <see cref="GeneratedCodeAttribute" /> otherwise <c>False</c>.
+        /// </returns>
+        public static bool IsGeneratedCode(this TypeDefinition typeDefinition)
+        {
+            return typeDefinition.CustomAttributes.Any(a => a.AttributeType.Name == "CompilerGeneratedAttribute" || a.AttributeType.Name == "GeneratedCodeAttribute");
         }
     }
 }

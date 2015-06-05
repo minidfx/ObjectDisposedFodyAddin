@@ -80,15 +80,42 @@
         ///     The <see cref="Type" /> that we want to extend.
         /// </param>
         /// <returns>
-        ///     The <see cref="Instruction" /> found.
+        ///     The <see cref="Instruction" /> found otherwise null.
         /// </returns>
-        public static Instruction GetLatestVariableInstruction(this ILProcessor ilProcessor)
+        public static Instruction GetCallTaskInstruction(this ILProcessor ilProcessor)
         {
             var reversedInstruction = ilProcessor.Body.Instructions.Reverse();
+            var callInstruction = reversedInstruction.FirstOrDefault(x => x.OpCode.Code == Code.Call);
 
-            var latestVariableInstruction = reversedInstruction.First(x => x.OpCode.Name.StartsWith("ldloc"));
+            return callInstruction;
+        }
 
-            return latestVariableInstruction;
+        /// <summary>
+        ///     Returns the latest instruction representing a variable.
+        /// </summary>
+        /// <param name="ilProcessor">
+        ///     The <see cref="Type" /> that we want to extend.
+        /// </param>
+        /// <returns>
+        ///     The latest instruction representing a variable otherwise null.
+        /// </returns>
+        public static Instruction GetNextVariableInstruction(this ILProcessor ilProcessor)
+        {
+            return ilProcessor.Body.Instructions
+                              .LastOrDefault(x => x.OpCode.Name.StartsWith("ldlocl"));
+        }
+
+        public static Instruction GetReturnedVariableInstruction(this ILProcessor ilProcessor)
+        {
+            var reversedInstruction = ilProcessor.Body.Instructions.Reverse();
+            var returnedVariableInstruction = reversedInstruction.FirstOrDefault(x => x.OpCode.Name.StartsWith("ldloc"));
+
+            return returnedVariableInstruction;
+        }
+
+        public static Instruction GetReturnInstruction(this ILProcessor ilProcessor)
+        {
+            return ilProcessor.Body.Instructions.Reverse().First(x => x.OpCode.Code == Code.Ret);
         }
     }
 }

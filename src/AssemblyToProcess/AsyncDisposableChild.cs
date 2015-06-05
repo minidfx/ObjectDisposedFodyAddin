@@ -2,7 +2,7 @@
 {
     public sealed class AsyncDisposableChild : AsyncDisposableBase
     {
-        public string SayMeHelloWorld()
+        public override string SayMeHelloWorld()
         {
             return "Hello World!";
         }

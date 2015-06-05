@@ -15,7 +15,7 @@
             Console.WriteLine("Yuhuu!");
         }
 
-        public string SayMeHelloWorld()
+        public virtual string SayMeHelloWorld()
         {
             return "Hello World!";
         }

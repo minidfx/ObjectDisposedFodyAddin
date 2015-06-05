@@ -437,13 +437,18 @@ namespace Tests
 #endif
 
             var newAssemblyPath = assemblyPath.Replace(".dll", ".modified.dll");
+            var assembliesDirectory = Path.GetDirectoryName(newAssemblyPath);
 
             if (File.Exists(newAssemblyPath))
             {
                 File.Delete(newAssemblyPath);
             }
 
-            var moduleDefinition = ModuleDefinition.ReadModule(assemblyPath);
+            var resolver = new DefaultAssemblyResolver();
+            resolver.AddSearchDirectory(assembliesDirectory);
+            var parameters = new ReaderParameters { AssemblyResolver = resolver };
+
+            var moduleDefinition = ModuleDefinition.ReadModule(assemblyPath, parameters);
             var weavingTask = new ModuleWeaver
                                   {
                                       ModuleDefinition = moduleDefinition
@@ -452,7 +457,7 @@ namespace Tests
             moduleDefinition.Write(newAssemblyPath);
 
 #if !LINUX
-            // Verify that the assembly is correctly before running tests.
+            // Verify that the assembly is well form before running tests.
             Verifier.Verify(assemblyPath, newAssemblyPath);
 #endif
 

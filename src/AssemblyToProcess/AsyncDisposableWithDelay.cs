@@ -10,7 +10,7 @@
             await Task.Delay(100);
         }
 
-        public string SayMeHelloWorld()
+        public override string SayMeHelloWorld()
         {
             return "Hello World!";
         }

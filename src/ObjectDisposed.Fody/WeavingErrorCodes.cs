@@ -18,6 +18,10 @@
         /// <summary>
         ///     The type contains the IDisposable and the IAsyncDisposable.
         /// </summary>
-        ContainsBothInterface
+        ContainsBothInterface,
+
+        PropertyNotFound,
+
+        BaseMethodNotFound
     }
 }

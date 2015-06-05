@@ -31,6 +31,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AssemblyToProcessWithInvali
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AssemblyToProcessWithInvalidType", "src\AssemblyToProcessWithInvalidType\AssemblyToProcessWithInvalidType.csproj", "{193E4E8B-08C7-4048-9B7F-CCB1542EF4D0}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AssemblyToProcessExternalDependencies", "src\AssemblyToProcessExternalDependencies\AssemblyToProcessExternalDependencies.csproj", "{4098ADCD-2DDF-4EC5-965F-907C1B68276A}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -61,6 +63,10 @@ Global
 		{193E4E8B-08C7-4048-9B7F-CCB1542EF4D0}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{193E4E8B-08C7-4048-9B7F-CCB1542EF4D0}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{193E4E8B-08C7-4048-9B7F-CCB1542EF4D0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4098ADCD-2DDF-4EC5-965F-907C1B68276A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4098ADCD-2DDF-4EC5-965F-907C1B68276A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4098ADCD-2DDF-4EC5-965F-907C1B68276A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4098ADCD-2DDF-4EC5-965F-907C1B68276A}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
