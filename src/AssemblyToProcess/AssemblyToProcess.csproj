@@ -64,7 +64,7 @@
       <Name>AssemblyToProcessExternalDependencies</Name>
     </ProjectReference>
     <ProjectReference Include="..\ReferenceAssembly\ReferenceAssembly.csproj">
-      <Project>{59EEDCEB-827E-4847-806B-C533BDE2F983}</Project>
+      <Project>{73fc34f7-d9bb-4a4c-9ef3-1ea025bc35af}</Project>
       <Name>ReferenceAssembly</Name>
     </ProjectReference>
   </ItemGroup>
