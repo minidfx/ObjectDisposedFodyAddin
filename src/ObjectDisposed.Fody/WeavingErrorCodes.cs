@@ -20,8 +20,9 @@
         /// </summary>
         ContainsBothInterface,
 
-        PropertyNotFound,
-
-        BaseMethodNotFound
+        /// <summary>
+        ///     The property IsDisposed has been not found.
+        /// </summary>
+        PropertyNotFound
     }
 }

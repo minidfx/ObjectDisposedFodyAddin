@@ -57,6 +57,21 @@
             yield return ilProcessor.Create(OpCodes.Throw);
         }
 
+        /// <summary>
+        ///     Yields instructions for a getter property.
+        /// </summary>
+        /// <param name="ilProcessor">
+        ///     Service for managing instructions of a method.
+        /// </param>
+        /// <param name="basePropertyGetterReference">
+        ///     <see cref="MethodReference" /> of the getter property.
+        /// </param>
+        /// <param name="backingFieldReference">
+        ///     The backing field containing the value whether the object is disposed or not.
+        /// </param>
+        /// <returns>
+        ///     The <see cref="Instruction" />s yielded for a getter property.
+        /// </returns>
         public static IEnumerable<Instruction> GetIsDisposedInstructionsGetter(ILProcessor ilProcessor,
                                                                                MethodReference basePropertyGetterReference,
                                                                                FieldReference backingFieldReference)
@@ -124,24 +139,21 @@
             yield return ilProcessor.Create(OpCodes.Stfld, fieldReference);
         }
 
+        /// <summary>
+        ///     Yields <see cref="Instruction" />s to set the backing field to <see langword="True" />.
+        /// </summary>
+        /// <param name="ilProcessor">
+        ///     Service for managing instructions of a method.
+        /// </param>
+        /// <param name="fieldReference">
+        ///     The <see cref="FieldReference" /> of the backing field.
+        /// </param>
+        /// <returns>
+        ///     The <see cref="Instruction" />s yielded.
+        /// </returns>
         public static IEnumerable<Instruction> GetSetToDisposeFullInstructions(ILProcessor ilProcessor,
                                                                                FieldReference fieldReference)
         {
-            foreach (var instruction in GetDisposeMethodPartialInstructions(ilProcessor, fieldReference))
-            {
-                yield return instruction;
-            }
-
-            yield return ilProcessor.Create(OpCodes.Ret);
-        }
-
-        public static IEnumerable<Instruction> GetDisposeMethodFullInstructions(ILProcessor ilProcessor,
-                                                                                MethodReference baseMethodReference,
-                                                                                FieldReference fieldReference)
-        {
-            yield return ilProcessor.Create(OpCodes.Ldarg_0);
-            yield return ilProcessor.Create(OpCodes.Call, baseMethodReference);
-
             foreach (var instruction in GetDisposeMethodPartialInstructions(ilProcessor, fieldReference))
             {
                 yield return instruction;
@@ -180,22 +192,6 @@
             yield return ilProcessor.Create(OpCodes.Ldarg_0);
             yield return ilProcessor.Create(OpCodes.Ldloc, variable);
             yield return ilProcessor.Create(OpCodes.Call, taskContinueWithMethodReference);
-        }
-
-        public static IEnumerable<Instruction> GetFullContinueWithInstructions(ILProcessor ilProcessor,
-                                                                               MethodReference taskContinueWithMethodReference,
-                                                                               MethodReference baseMethodReference,
-                                                                               TypeReference taskTypeReference)
-        {
-            yield return ilProcessor.Create(OpCodes.Ldarg_0);
-            yield return ilProcessor.Create(OpCodes.Call, baseMethodReference);
-
-            foreach (var instruction in GetPartialContinueWithInstructions(ilProcessor, taskContinueWithMethodReference, taskTypeReference))
-            {
-                yield return instruction;
-            }
-
-            yield return ilProcessor.Create(OpCodes.Ret);
         }
 
         /// <summary>

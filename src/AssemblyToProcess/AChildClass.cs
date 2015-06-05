@@ -8,5 +8,9 @@
         {
             return "Hello World!";
         }
+
+        public override void Dispose()
+        {
+        }
     }
 }

@@ -70,7 +70,7 @@
     <Compile Include="Extensions\MethodDefinitionExtensions.cs" />
     <Compile Include="Extensions\MethodReferenceExtensions.cs" />
     <Compile Include="Extensions\TypeDefinitionExtensions.cs" />
-    <Compile Include="ImporterService.cs" />
+    <Compile Include="References.cs" />
     <Compile Include="Instructions.cs" />
     <Compile Include="ModuleWeaver.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

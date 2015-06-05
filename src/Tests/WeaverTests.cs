@@ -4,6 +4,7 @@ namespace Tests
 {
     using System;
     using System.IO;
+    using System.Linq;
     using System.Reflection;
 
     using Mono.Cecil;
@@ -32,6 +33,43 @@ namespace Tests
                     public void then_ObjectDisposedException_is_throwing_with_SayMeHelloWorld()
                     {
                         this.Instance.SayMeHelloWorld();
+                    }
+
+                    public abstract class with_AChildClass_class : with_exceptions_expected
+                    {
+                        #region Context
+
+                        protected override dynamic GetInstance()
+                        {
+                            var projectPath = Path.GetFullPath(Path.Combine(Environment.CurrentDirectory, this.RelativeProjectPath));
+
+                            var directoryName = Path.GetDirectoryName(projectPath);
+                            if (directoryName == null)
+                            {
+                                throw new IOException("Cannot determines the project directory.");
+                            }
+
+                            var complementaryAssembly = Path.Combine(directoryName, Path.Combine("bin", "Debug", string.Format("{0}.dll", "AssemblyToProcessExternalDependencies")));
+
+                            var assembly = Assembly.LoadFrom(complementaryAssembly);
+                            AppDomain.CurrentDomain.Load(assembly.GetName());
+
+                            return this.CreateInstance("AssemblyToProcess.AChildClass");
+                        }
+
+                        #endregion
+
+                        public sealed class when_Dispose_is_called : with_AChildClass_class
+                        {
+                            #region Context
+
+                            protected override void MethodCalled()
+                            {
+                                this.Instance.Dispose();
+                            }
+
+                            #endregion
+                        }
                     }
 
                     public abstract class with_Disposable_class : with_exceptions_expected
@@ -331,10 +369,14 @@ namespace Tests
 
                 #region Context
 
+                protected string RelativeProjectPath = Path.Combine("..", "..", "..", "AssemblyToProcess", "AssemblyToProcess.csproj");
+
                 [SetUp]
                 public virtual void SetUp()
                 {
-                    this.TryToLoadAssembly(Path.Combine("..", "..", "..", "AssemblyToProcess", "AssemblyToProcess.csproj"));
+                    var random = new Random();
+
+                    this.TryToLoadAssembly(this.RelativeProjectPath, random.Next(1000).ToString());
                     this.Instance = this.GetInstance();
                     this.MethodCalled();
                 }
@@ -350,7 +392,9 @@ namespace Tests
             [Test]
             public void then_load_assembly_failed()
             {
-                var exception = Assert.Throws<WeavingException>(() => { this.TryToLoadAssembly(Path.Combine("..", "..", "..", this.ProjectName, this.ProjectName + ".csproj")); });
+                var random = new Random();
+
+                var exception = Assert.Throws<WeavingException>(() => { this.TryToLoadAssembly(Path.Combine("..", "..", "..", this.ProjectName, this.ProjectName + ".csproj"), random.Next(1000).ToString()); });
                 Assert.AreEqual(this.ExpectedErrorCode, exception.ErrorCode);
             }
 
@@ -410,17 +454,11 @@ namespace Tests
 
         #region Context
 
-        private static Assembly newAssembly;
-
         protected dynamic Instance { get; private set; }
 
-        protected void TryToLoadAssembly(string relativeProjectPath)
+        protected void TryToLoadAssembly(string relativeProjectPath,
+                                         string seed)
         {
-            if (newAssembly != null)
-            {
-                return;
-            }
-
             var projectPath = Path.GetFullPath(Path.Combine(Environment.CurrentDirectory, relativeProjectPath));
             var projectName = Path.GetFileNameWithoutExtension(relativeProjectPath);
 
@@ -436,13 +474,8 @@ namespace Tests
             var assemblyPath = Path.Combine(directoryName, Path.Combine("bin", "Release", string.Format("{0}.dll", projectName)));
 #endif
 
-            var newAssemblyPath = assemblyPath.Replace(".dll", ".modified.dll");
+            var newAssemblyPath = assemblyPath.Replace(".dll", string.Format(".{0}.dll", seed));
             var assembliesDirectory = Path.GetDirectoryName(newAssemblyPath);
-
-            if (File.Exists(newAssemblyPath))
-            {
-                File.Delete(newAssemblyPath);
-            }
 
             var resolver = new DefaultAssemblyResolver();
             resolver.AddSearchDirectory(assembliesDirectory);
@@ -461,13 +494,18 @@ namespace Tests
             Verifier.Verify(assemblyPath, newAssemblyPath);
 #endif
 
-            newAssembly = Assembly.LoadFile(newAssemblyPath);
+            var newAssembly = Assembly.LoadFrom(newAssemblyPath);
+            AppDomain.CurrentDomain.Load(newAssembly.GetName());
         }
 
-        protected dynamic CreateInstance(string className,
-                                         params object[] args)
+        protected dynamic CreateInstance(string className)
         {
-            return Activator.CreateInstance(newAssembly.GetType(className, true), args);
+            var type = AppDomain.CurrentDomain
+                                .GetAssemblies()
+                                .SelectMany(a => a.GetTypes())
+                                .Single(t => t.FullName == className);
+
+            return Activator.CreateInstance(type, true);
         }
 
         #endregion

@@ -82,6 +82,9 @@
         /// <param name="returnTypeReference">
         ///     The return type of the method.
         /// </param>
+        /// <param name="attributes">
+        ///     The attributes of the <see cref="MethodDefinition" />.
+        /// </param>
         /// <param name="instructions">
         ///     The instructions that will be injected into the method.
         /// </param>
@@ -92,7 +95,7 @@
                                                     string name,
                                                     MethodAttributes methodAttributes,
                                                     TypeReference returnTypeReference,
-                                                    IEnumerable<CustomAttribute> attribtues,
+                                                    IEnumerable<CustomAttribute> attributes,
                                                     Func<ILProcessor, IEnumerable<Instruction>> instructions)
         {
             var newMethod = new MethodDefinition(name, methodAttributes, returnTypeReference);
@@ -100,7 +103,7 @@
 
             newMethod.Body.GetILProcessor().AppendRange(instructions(ilProcessor));
 
-            foreach (var customAttribute in attribtues)
+            foreach (var customAttribute in attributes)
             {
                 newMethod.CustomAttributes.Add(customAttribute);
             }
@@ -116,10 +119,14 @@
         /// <param name="typeDefinition">
         ///     The <see cref="Type" /> that we want to extend.
         /// </param>
+        /// <param name="moduleWeaver">
+        ///     The <see cref="ModuleWeaver" /> used for logging purpose.
+        /// </param>
         /// <returns>
         ///     <c>True</c> whether the type implements the interface IAsyncDisposable otherwise <c>False</c>.
         /// </returns>
-        public static bool HasIAsyncDisposableInterface(this TypeDefinition typeDefinition)
+        public static bool HasIAsyncDisposableInterface(this TypeDefinition typeDefinition,
+                                                        ModuleWeaver moduleWeaver)
         {
             if (typeDefinition.Interfaces.Any(i => i.Name == "IAsyncDisposable"))
             {
@@ -129,10 +136,18 @@
             if (typeDefinition.BaseType != null &&
                 typeDefinition.BaseType != typeDefinition.Module.TypeSystem.Object)
             {
-                var baseType = typeDefinition.Module.Import(typeDefinition.BaseType);
+                try
+                {
+                    var baseType = typeDefinition.Module.Import(typeDefinition.BaseType);
 
-                // ReSharper disable once TailRecursiveCall
-                return HasIAsyncDisposableInterface(baseType.Resolve());
+                    // ReSharper disable once TailRecursiveCall
+                    return HasIAsyncDisposableInterface(baseType.Resolve(), moduleWeaver);
+                }
+                catch (Exception e)
+                {
+                    moduleWeaver.LogError(string.Format("Error occured in the type {0}, {1}", typeDefinition.FullName, e.Message));
+                    throw;
+                }
             }
 
             return false;
@@ -154,55 +169,19 @@
         }
 
         /// <summary>
-        ///     Determimes whether the type contains at least a dispose method.
-        /// </summary>
-        /// <param name="typeDefinition">
-        ///     The <see cref="Type" /> that we want to extend.
-        /// </param>
-        /// <returns>
-        ///     <c>True</c> whether the type contains at least a dispose method otherwise <c>False</c>.
-        /// </returns>
-        public static bool HasAnyDisposeMethod(this TypeDefinition typeDefinition)
-        {
-            return typeDefinition.HasMethods && typeDefinition.Methods.Any(x => x.Name == "Dispose" || x.Name == "DisposeAsync");
-        }
-
-        public static bool HasDisposeMethod(this TypeDefinition typeDefinition)
-        {
-            return typeDefinition.Methods.Any(x => x.Name == "Dispose");
-        }
-
-        public static bool HasDisposeAsyncMethod(this TypeDefinition typeDefinition)
-        {
-            return typeDefinition.Methods.Any(x => x.Name == "DisposeAsync");
-        }
-
-        /// <summary>
-        ///     Determines whether the <paramref name="typeDefinition" /> implements the interface <see cref="IDisposable" /> or
-        ///     IAsyncDisposable.
-        /// </summary>
-        /// <param name="typeDefinition">
-        ///     The <see cref="Type" /> that we want to extend.
-        /// </param>
-        /// <returns>
-        ///     <c>True</c> whether the type implements the interface <see cref="IDisposable" /> or IAsyncDisposable otherwise
-        ///     <c>False</c>.
-        /// </returns>
-        public static bool HasBothInterfaces(this TypeDefinition typeDefinition)
-        {
-            return HasIDisposableInterface(typeDefinition) && HasIAsyncDisposableInterface(typeDefinition);
-        }
-
-        /// <summary>
         ///     Determines whether the <paramref name="typeDefinition" /> implements the interface <see cref="IDisposable" />.
         /// </summary>
         /// <param name="typeDefinition">
         ///     The <see cref="Type" /> that we want to extend.
         /// </param>
+        /// <param name="moduleWeaver">
+        ///     The <see cref="ModuleWeaver" /> used for logging purpose.
+        /// </param>
         /// <returns>
         ///     <c>True</c> whether the type implements the interface <see cref="IDisposable" /> otherwise <c>False</c>.
         /// </returns>
-        public static bool HasIDisposableInterface(this TypeDefinition typeDefinition)
+        public static bool HasIDisposableInterface(this TypeDefinition typeDefinition,
+                                                   ModuleWeaver moduleWeaver)
         {
             if (typeDefinition.Interfaces.Any(i => i.FullName == "System.IDisposable"))
             {
@@ -212,10 +191,18 @@
             if (typeDefinition.BaseType != null &&
                 typeDefinition.BaseType != typeDefinition.Module.TypeSystem.Object)
             {
-                var baseType = typeDefinition.Module.Import(typeDefinition.BaseType);
+                try
+                {
+                    var baseType = typeDefinition.Module.Import(typeDefinition.BaseType);
 
-                // ReSharper disable once TailRecursiveCall
-                return HasIDisposableInterface(baseType.Resolve());
+                    // ReSharper disable once TailRecursiveCall
+                    return HasIDisposableInterface(baseType.Resolve(), moduleWeaver);
+                }
+                catch (Exception e)
+                {
+                    moduleWeaver.LogError(string.Format("Error occured in the type {0}, {1}", typeDefinition.FullName, e.Message));
+                    throw;
+                }
             }
 
             return false;
@@ -236,18 +223,30 @@
         /// <param name="returnResultFunction">
         ///     <see cref="Func{T,TResult}" /> for formatting the result.
         /// </param>
+        /// <param name="moduleWeaver">
+        ///     The <see cref="ModuleWeaver" /> used for logging purpose.
+        /// </param>
         /// <returns>
         ///     The result formatted in according to the <paramref name="returnResultFunction" />.
         /// </returns>
         private static T FetchBases<T>(this TypeDefinition typeDefinition,
                                        Predicate<TypeDefinition> predicate,
-                                       Func<TypeDefinition, T> returnResultFunction)
+                                       Func<TypeDefinition, T> returnResultFunction,
+                                       ModuleWeaver moduleWeaver)
         {
             var walkerTypeDefinition = typeDefinition;
 
             while (walkerTypeDefinition.BaseType != null)
             {
-                walkerTypeDefinition = walkerTypeDefinition.BaseType.Resolve();
+                try
+                {
+                    walkerTypeDefinition = walkerTypeDefinition.BaseType.Resolve();
+                }
+                catch (Exception e)
+                {
+                    moduleWeaver.LogError(string.Format("Error occured in the type {0}, {1}", walkerTypeDefinition.FullName, e.Message));
+                    throw;
+                }
 
                 if (predicate(walkerTypeDefinition))
                 {
@@ -264,78 +263,23 @@
         /// <param name="typeDefinition">
         ///     The <see cref="Type" /> that we want to extend.
         /// </param>
+        /// <param name="moduleWeaver">
+        ///     The <see cref="ModuleWeaver" /> used for logging purpose.
+        /// </param>
         /// <returns>
         ///     The property found otherwise null.
         /// </returns>
-        public static MethodReference GetIsDisposedBasePropertyGetter(this TypeDefinition typeDefinition)
+        public static MethodReference GetIsDisposedBasePropertyGetter(this TypeDefinition typeDefinition,
+                                                                      ModuleWeaver moduleWeaver)
         {
             Func<PropertyDefinition, bool> predicate = p => p.Name == "IsDisposed";
             var baseProperty = typeDefinition.FetchBases(t => t.Properties.Any(predicate),
-                                                         t => t.Properties.SingleOrDefault(predicate));
+                                                         t => t.Properties.SingleOrDefault(predicate),
+                                                         moduleWeaver);
 
             return baseProperty != null
-                       ? ImporterService.Import(baseProperty.GetMethod)
+                       ? References.Import(baseProperty.GetMethod)
                        : null;
-        }
-
-        /// <summary>
-        ///     Fetchs and returns the Dispose method.
-        /// </summary>
-        /// <param name="typeDefinition">
-        ///     The <see cref="Type" /> that we want to extend.
-        /// </param>
-        /// <returns>
-        ///     The <see cref="MethodReference" /> representing the method otherwise null.
-        /// </returns>
-        public static MethodReference GetSyncBaseDisposable(this TypeDefinition typeDefinition)
-        {
-            Func<MethodDefinition, bool> predicate = x => (x.Name == "Dispose") &&
-                                                          !x.Attributes.HasFlag(MethodAttributes.Private) &&
-                                                          !x.Attributes.HasFlag(MethodAttributes.Final);
-            var baseMethod = typeDefinition.FetchBases(t => t.Methods.Any(predicate),
-                                                       t => t.Methods.SingleOrDefault(predicate));
-
-            return baseMethod != null
-                       ? ImporterService.Import(baseMethod)
-                       : null;
-        }
-
-        /// <summary>
-        ///     Creats and adds a property to the <paramref name="typeDefinition" />.
-        /// </summary>
-        /// <param name="typeDefinition">
-        ///     The <see cref="Type" /> that we want to extend.
-        /// </param>
-        /// <param name="name">
-        ///     The property name.
-        /// </param>
-        /// <param name="basePropertyGetterReference">
-        ///     The base getter of the property.
-        /// </param>
-        /// <param name="backingFieldReference">
-        ///     The backing field containing the state of the object.
-        /// </param>
-        /// <param name="propertyTypeReference">
-        ///     The type of the property.
-        /// </param>
-        /// <param name="voidTypeReference">
-        ///     The system void type reference.
-        /// </param>
-        /// <param name="customAttributes">
-        ///     The <see cref="CustomAttribute" /> that will be apply on the property.
-        /// </param>
-        /// <returns>
-        ///     The <see cref="PropertyDefinition" /> of the new property created.
-        /// </returns>
-        public static PropertyDefinition CreateProperty(this TypeDefinition typeDefinition,
-                                                        string name,
-                                                        MethodReference basePropertyGetterReference,
-                                                        FieldReference backingFieldReference,
-                                                        TypeReference propertyTypeReference,
-                                                        TypeReference voidTypeReference,
-                                                        IEnumerable<CustomAttribute> customAttributes)
-        {
-            return typeDefinition.CreateOverrideProperty(name, null, backingFieldReference, propertyTypeReference, voidTypeReference, customAttributes);
         }
 
         /// <summary>
@@ -485,6 +429,33 @@
         public static bool IsGeneratedCode(this TypeDefinition typeDefinition)
         {
             return typeDefinition.CustomAttributes.Any(a => a.AttributeType.Name == "CompilerGeneratedAttribute" || a.AttributeType.Name == "GeneratedCodeAttribute");
+        }
+
+        /// <summary>
+        ///     Creates the IsDisposed property in the <paramref name="type" />.
+        /// </summary>
+        /// <param name="type">
+        ///     The <see cref="Type" /> that we want to extend.
+        /// </param>
+        /// <param name="backingDisposeField">
+        ///     The backing field containing the state.
+        /// </param>
+        /// <param name="systemType">
+        ///     The <see cref="TypeSystem" />s available.
+        /// </param>
+        /// <param name="customAttributes">
+        ///     The <see cref="CustomAttribute" /> that will be added to the property.
+        /// </param>
+        /// <param name="baseIsDisposedPropertyGetter">
+        ///     The base getter property <see cref="MethodReference" />.
+        /// </param>
+        public static void CreateIsDisposedProperty(this TypeDefinition type,
+                                                    FieldReference backingDisposeField,
+                                                    TypeSystem systemType,
+                                                    IEnumerable<CustomAttribute> customAttributes,
+                                                    MethodReference baseIsDisposedPropertyGetter)
+        {
+            type.CreateOverrideProperty("IsDisposed", baseIsDisposedPropertyGetter, backingDisposeField, systemType.Boolean, systemType.Void, customAttributes);
         }
     }
 }

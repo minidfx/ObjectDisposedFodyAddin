@@ -4,9 +4,12 @@
 
     using Mono.Cecil;
 
-    public static class ImporterService
+    /// <summary>
+    ///     Service for importing type from anywhere.
+    /// </summary>
+    public static class References
     {
-        private static readonly object initializeLock = new object();
+        private static readonly object InitializeLock = new object();
 
         private static Lazy<ModuleDefinition> MainModuleDefinition { get; set; }
 
@@ -18,15 +21,9 @@
         /// </param>
         public static void Init(ModuleDefinition mainModuleDefinition)
         {
-            if (MainModuleDefinition == null || !MainModuleDefinition.IsValueCreated)
+            lock (InitializeLock)
             {
-                lock (initializeLock)
-                {
-                    if (MainModuleDefinition == null || !MainModuleDefinition.IsValueCreated)
-                    {
-                        MainModuleDefinition = new Lazy<ModuleDefinition>(() => mainModuleDefinition);
-                    }
-                }
+                MainModuleDefinition = new Lazy<ModuleDefinition>(() => mainModuleDefinition);
             }
         }
 
@@ -43,7 +40,7 @@
         {
             if (MainModuleDefinition == null)
             {
-                throw new WeavingException("You must initialized the ImporterService.", WeavingErrorCodes.None);
+                throw new WeavingException("You must initialized the References.", WeavingErrorCodes.None);
             }
 
             return MainModuleDefinition.Value.Import(methodDefinition);
@@ -62,7 +59,7 @@
         {
             if (MainModuleDefinition == null)
             {
-                throw new WeavingException("You must initialized the ImporterService.", WeavingErrorCodes.None);
+                throw new WeavingException("You must initialized the References.", WeavingErrorCodes.None);
             }
 
             return MainModuleDefinition.Value.Import(typeReference);
