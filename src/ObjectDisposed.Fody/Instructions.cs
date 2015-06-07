@@ -126,7 +126,7 @@
         /// <returns>
         ///     The <see cref="Instruction" />s yielded.
         /// </returns>
-        public static IEnumerable<Instruction> GetDisposeMethodPartialInstructions(ILProcessor ilProcessor,
+        public static IEnumerable<Instruction> GetSetToDisposedMethodPartialInstructions(ILProcessor ilProcessor,
                                                                                    FieldReference fieldReference)
         {
             // Push the instance on the stack
@@ -154,7 +154,7 @@
         public static IEnumerable<Instruction> GetSetToDisposeFullInstructions(ILProcessor ilProcessor,
                                                                                FieldReference fieldReference)
         {
-            foreach (var instruction in GetDisposeMethodPartialInstructions(ilProcessor, fieldReference))
+            foreach (var instruction in GetSetToDisposedMethodPartialInstructions(ilProcessor, fieldReference))
             {
                 yield return instruction;
             }

@@ -30,8 +30,8 @@
                                                  TypeReference taskTypeReference)
         {
             var ilProcessor = methodDefinition.Body.GetILProcessor();
-            var genericInstructions = Instructions.GetPartialContinueWithInstructions(ilProcessor, setToDisposedMethodReference, taskTypeReference)
-                                                  .ToArray();
+            var continueTheTaskInstuctions = Instructions.GetPartialContinueWithInstructions(ilProcessor, setToDisposedMethodReference, taskTypeReference)
+                                                         .ToArray();
 
             var returnInstructions = ilProcessor.Body.Instructions
                                                 .Where(x => x.OpCode.Code == Code.Ret)
@@ -39,7 +39,7 @@
 
             foreach (var returnInstruction in returnInstructions)
             {
-                ilProcessor.InsertBeforeRange(returnInstruction, genericInstructions);
+                ilProcessor.InsertBeforeRange(returnInstruction, continueTheTaskInstuctions);
             }
 
             methodDefinition.Body.OptimizeMacros();
@@ -58,9 +58,19 @@
                                                 FieldReference fieldReference)
         {
             var ilProcessor = methodDefinition.Body.GetILProcessor();
+            var setToDisposedInstructions = Instructions.GetSetToDisposedMethodPartialInstructions(ilProcessor, fieldReference)
+                                                        .ToArray();
 
-            ilProcessor.InsertBeforeRange(ilProcessor.Body.Instructions.Single(x => x.OpCode.Code == Code.Ret),
-                                          Instructions.GetDisposeMethodPartialInstructions(ilProcessor, fieldReference));
+            var returnInstructions = ilProcessor.Body.Instructions
+                                                .Where(x => x.OpCode.Code == Code.Ret)
+                                                .ToArray();
+
+            foreach (var returnInstruction in returnInstructions)
+            {
+                ilProcessor.InsertBeforeRange(returnInstruction, setToDisposedInstructions);
+            }
+
+            ilProcessor.Body.OptimizeMacros();
         }
 
         /// <summary>
