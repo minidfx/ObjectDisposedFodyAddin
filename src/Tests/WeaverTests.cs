@@ -41,20 +41,7 @@ namespace Tests
 
                         protected override dynamic GetInstance()
                         {
-                            var projectPath = Path.GetFullPath(Path.Combine(Environment.CurrentDirectory, this.RelativeProjectPath));
-
-                            var directoryName = Path.GetDirectoryName(projectPath);
-                            if (directoryName == null)
-                            {
-                                throw new IOException("Cannot determines the project directory.");
-                            }
-
-                            var complementaryAssembly = Path.Combine(directoryName, Path.Combine("bin", "Debug", string.Format("{0}.dll", "AssemblyToProcessExternalDependencies")));
-
-                            var assembly = Assembly.LoadFrom(complementaryAssembly);
-                            AppDomain.CurrentDomain.Load(assembly.GetName());
-
-                            return this.CreateInstance("AssemblyToProcess.AChildClass");
+                          return this.CreateInstance("AssemblyToProcess.AChildClass");
                         }
 
                         #endregion
