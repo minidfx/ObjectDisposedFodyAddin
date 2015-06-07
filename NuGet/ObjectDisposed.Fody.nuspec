@@ -2,7 +2,7 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2011/10/nuspec.xsd">
     <metadata>
         <id>ObjectDisposed.Fody</id>
-        <version>0.4.12-alpha</version>
+        <version>0.4.14-alpha</version>
         <title>ObjectDisposed.Fody</title>
         <authors>Burgy Benjamin</authors>
         <owners>Burgy Benjamin</owners>
@@ -17,7 +17,7 @@
         </dependencies>
     </metadata>
     <files>
-        <file src="..\src\ReferenceAssembly\bin\Release\ObjectDisposed.dll" target="lib\portable-net45+sl4\ObjectDisposed.dll" />
+        <file src="..\src\ReferenceAssembly\bin\Release\ObjectDisposed.dll" target="lib\net451\ObjectDisposed.dll" />
         <file src="tools\install.ps1" target="tools\install.ps1" />
         <file src="tools\uninstall.ps1" target="tools\uninstall.ps1" />
         <file src="..\src\ObjectDisposed.Fody\bin\Release\ObjectDisposed.Fody.dll" target="ObjectDisposed.Fody.dll" />

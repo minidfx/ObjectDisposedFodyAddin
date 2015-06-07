@@ -5,7 +5,7 @@ using System.Resources;
 [assembly: CLSCompliant(true)]
 [assembly: AssemblyProduct("ObjectDisposed.Fody")]
 [assembly: AssemblyCopyright("Copyright © Burgy Benjamin 2015")]
-[assembly: AssemblyVersion("0.4.12.*")]
+[assembly: AssemblyVersion("0.4.14.*")]
 [assembly: NeutralResourcesLanguage("en")]
 
 #if DEBUG
