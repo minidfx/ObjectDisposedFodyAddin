@@ -18,7 +18,7 @@ For Disposable classes, It injects the statement just before a return instructio
 
     this.isDisposed = true
 
-For AsyncDisposable classes, It injects statements for calling
+For AsyncDisposable classes, It injects these statements for calling the ContinueWith method of the returned task.
 
     task.ContinueWith(t => { this.isDisposed = true; });
 
@@ -53,6 +53,7 @@ You will have
         [GenerateCode(...)]
         private bool isDisposed;
 
+        /* Not generaged by the Addin */
         [CompilerGenerated]
         private bool backingFieldFooProperty;
 
@@ -134,6 +135,7 @@ You will have
         [GenerateCode(...)]
         private bool isDisposed;
 
+        /* Not generaged by the Addin */
         [CompilerGenerated]
         private bool backingFieldFooProperty;
 
@@ -165,6 +167,7 @@ You will have
         public virtual void Dispose()
         {
           // Some statements ...
+          this.isDisposed = true;
         }
 
         // Some methods ...
