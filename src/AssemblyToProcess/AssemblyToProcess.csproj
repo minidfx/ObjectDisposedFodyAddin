@@ -1,80 +1,11 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
   <PropertyGroup>
-    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
-    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{11F7F5EC-6D35-4C4C-84CF-FB5E42D3C68C}</ProjectGuid>
-    <OutputType>Library</OutputType>
-    <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>AssemblyToProcess</RootNamespace>
-    <AssemblyName>AssemblyToProcess</AssemblyName>
-    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
-    <FileAlignment>512</FileAlignment>
-    <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\..\</SolutionDir>
-    <RestorePackages>true</RestorePackages>
-    <NuGetPackageImportStamp>283054a9</NuGetPackageImportStamp>
+    <TargetFramework>netstandard2.0</TargetFramework>
   </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
-    <DebugSymbols>true</DebugSymbols>
-    <DebugType>full</DebugType>
-    <Optimize>false</Optimize>
-    <OutputPath>bin\Debug\</OutputPath>
-    <DefineConstants>DEBUG;TRACE</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
-  </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
-    <DebugType>pdbonly</DebugType>
-    <Optimize>true</Optimize>
-    <OutputPath>bin\Release\</OutputPath>
-    <DefineConstants>TRACE</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
-  </PropertyGroup>
+
   <ItemGroup>
-    <Reference Include="System" />
-    <Reference Include="System.Core" />
+    <ProjectReference Include="..\ReferenceAssembly\ReferenceAssembly.csproj" />
   </ItemGroup>
-  <ItemGroup>
-    <Compile Include="..\ObjectDisposed.Fody\Properties\GlobalAssemblyInfo.cs">
-      <Link>Properties\GlobalAssemblyInfo.cs</Link>
-    </Compile>
-    <Compile Include="AChildClass.cs" />
-    <Compile Include="AsyncDisposable.cs" />
-    <Compile Include="AsyncDisposableBase.cs" />
-    <Compile Include="AsyncDisposableChild.cs" />
-    <Compile Include="AsyncDisposableWithAwait.cs" />
-    <Compile Include="AsyncDisposableWithDelay.cs" />
-    <Compile Include="AsyncDisposableWithMultiLocalVariables.cs" />
-    <Compile Include="AsyncDisposableWithMultiTasks.cs" />
-    <Compile Include="DiposableChildWithOverride.cs" />
-    <Compile Include="Disposable.cs" />
-    <Compile Include="DisposableBase.cs" />
-    <Compile Include="DisposableChild.cs" />
-    <Compile Include="DisposableWithAnotherInterfaceDisposable.cs" />
-    <Compile Include="DisposableWithoutGuard.cs" />
-    <Compile Include="IAnInterface.cs" />
-    <Compile Include="IAsyncDisposable.cs" />
-    <Compile Include="Properties\AssemblyInfo.cs" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\AssemblyToProcessExternalDependencies\AssemblyToProcessExternalDependencies.csproj">
-      <Project>{4098ADCD-2DDF-4EC5-965F-907C1B68276A}</Project>
-      <Name>AssemblyToProcessExternalDependencies</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\ReferenceAssembly\ReferenceAssembly.csproj">
-      <Project>{73fc34f7-d9bb-4a4c-9ef3-1ea025bc35af}</Project>
-      <Name>ReferenceAssembly</Name>
-    </ProjectReference>
-  </ItemGroup>
-  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
-  <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="Exists('$(SolutionDir)\.nuget\NuGet.targets')" />
-  <!-- To modify your build process, add your task inside one of the targets below and uncomment it.
-       Other similar extension points exist, see Microsoft.Common.targets.
-  <Target Name="BeforeBuild">
-  </Target>
-  <Target Name="AfterBuild">
-  </Target>
-  -->
+
 </Project>

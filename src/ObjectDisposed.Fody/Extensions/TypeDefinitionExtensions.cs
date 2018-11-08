@@ -1,15 +1,16 @@
-﻿namespace ObjectDisposedFodyAddin.Extensions
+﻿using System;
+using System.CodeDom.Compiler;
+using System.Collections.Generic;
+using System.Linq;
+using System.Runtime.CompilerServices;
+using Fody;
+using Mono.Cecil;
+using Mono.Cecil.Cil;
+using Mono.Cecil.Rocks;
+using ObjectDisposedFodyAddin.ReferenceAssembly;
+
+namespace ObjectDisposed.Fody.Extensions
 {
-    using System;
-    using System.CodeDom.Compiler;
-    using System.Collections.Generic;
-    using System.Linq;
-    using System.Runtime.CompilerServices;
-
-    using Mono.Cecil;
-    using Mono.Cecil.Cil;
-    using Mono.Cecil.Rocks;
-
     /// <summary>
     ///     Contains extension methods for the any <see cref="TypeDefinition" />.
     /// </summary>
@@ -128,7 +129,12 @@
         public static bool HasIAsyncDisposableInterface(this TypeDefinition typeDefinition,
                                                         ModuleWeaver moduleWeaver)
         {
-            if (typeDefinition.Interfaces.Any(i => i.Name == "IAsyncDisposable"))
+            if (typeDefinition is null)
+            {
+                return false;
+            }
+
+            if (typeDefinition.Interfaces.Any(i => i.InterfaceType.Name == "IAsyncDisposable"))
             {
                 return true;
             }
@@ -138,14 +144,14 @@
             {
                 try
                 {
-                    var baseType = typeDefinition.Module.Import(typeDefinition.BaseType);
+                    var baseType = typeDefinition.Module.ImportReference(typeDefinition.BaseType);
 
                     // ReSharper disable once TailRecursiveCall
                     return HasIAsyncDisposableInterface(baseType.Resolve(), moduleWeaver);
                 }
                 catch (Exception e)
                 {
-                    moduleWeaver.LogError(string.Format("Error occured in the type {0}, {1}", typeDefinition.FullName, e.Message));
+                    moduleWeaver.LogError($"Error occured in the type {typeDefinition.FullName}, {e.Message}");
                     throw;
                 }
             }
@@ -165,7 +171,7 @@
         /// </returns>
         public static bool SkipDisposeGuard(this TypeDefinition typeDefinition)
         {
-            return typeDefinition.CustomAttributes.Any(x => x.AttributeType.FullName == "ObjectDisposedFodyAddin.SkipDisposeGuardAttribute");
+            return typeDefinition.CustomAttributes.Any(x => x.AttributeType.FullName == "ObjectDisposedFodyAddin.ReferenceAssembly.SkipDisposeGuardAttribute");
         }
 
         /// <summary>
@@ -183,7 +189,12 @@
         public static bool HasIDisposableInterface(this TypeDefinition typeDefinition,
                                                    ModuleWeaver moduleWeaver)
         {
-            if (typeDefinition.Interfaces.Any(i => i.FullName == "System.IDisposable"))
+            if (typeDefinition is null)
+            {
+                return false;
+            }
+
+            if (typeDefinition.Interfaces.Any(i => i.InterfaceType.FullName == "System.IDisposable"))
             {
                 return true;
             }
@@ -193,14 +204,14 @@
             {
                 try
                 {
-                    var baseType = typeDefinition.Module.Import(typeDefinition.BaseType);
+                    var baseType = typeDefinition.Module.ImportReference(typeDefinition.BaseType);
 
                     // ReSharper disable once TailRecursiveCall
                     return HasIDisposableInterface(baseType.Resolve(), moduleWeaver);
                 }
                 catch (Exception e)
                 {
-                    moduleWeaver.LogError(string.Format("Error occured in the type {0}, {1}", typeDefinition.FullName, e.Message));
+                    moduleWeaver.LogError($"Error occured in the type {typeDefinition.FullName}, {e.Message}");
                     throw;
                 }
             }
@@ -229,28 +240,29 @@
         /// <returns>
         ///     The result formatted in according to the <paramref name="returnResultFunction" />.
         /// </returns>
-        private static T FetchBases<T>(this TypeDefinition typeDefinition,
+        private static T VisitParents<T>(this TypeDefinition typeDefinition,
                                        Predicate<TypeDefinition> predicate,
                                        Func<TypeDefinition, T> returnResultFunction,
-                                       ModuleWeaver moduleWeaver)
+                                       BaseModuleWeaver moduleWeaver)
         {
-            var walkerTypeDefinition = typeDefinition;
+            var currentTypeDefinition = typeDefinition;
 
-            while (walkerTypeDefinition.BaseType != null)
+            while (currentTypeDefinition.BaseType != null)
             {
                 try
                 {
-                    walkerTypeDefinition = walkerTypeDefinition.BaseType.Resolve();
+                    var baseType = currentTypeDefinition.BaseType.Resolve();
+                    currentTypeDefinition = baseType ?? throw new InvalidOperationException($"Cannot resolve the parent type definition: {currentTypeDefinition.BaseType.FullName}");
                 }
                 catch (Exception e)
                 {
-                    moduleWeaver.LogError(string.Format("Error occured in the type {0}, {1}", walkerTypeDefinition.FullName, e.Message));
+                    moduleWeaver.LogError($"Error occured in the type {currentTypeDefinition.FullName}, {e.Message}");
                     throw;
                 }
 
-                if (predicate(walkerTypeDefinition))
+                if (predicate(currentTypeDefinition))
                 {
-                    return returnResultFunction(walkerTypeDefinition);
+                    return returnResultFunction(currentTypeDefinition);
                 }
             }
 
@@ -272,13 +284,13 @@
         public static MethodReference GetIsDisposedBasePropertyGetter(this TypeDefinition typeDefinition,
                                                                       ModuleWeaver moduleWeaver)
         {
-            Func<PropertyDefinition, bool> predicate = p => p.Name == "IsDisposed";
-            var baseProperty = typeDefinition.FetchBases(t => t.Properties.Any(predicate),
-                                                         t => t.Properties.SingleOrDefault(predicate),
-                                                         moduleWeaver);
+            bool Predicate(PropertyDefinition p) => p.Name == "IsDisposed";
+            var baseProperty = typeDefinition.VisitParents(x => x.Properties.Any(Predicate),
+                                                           x => x.Properties.SingleOrDefault(Predicate),
+                                                           moduleWeaver);
 
             return baseProperty != null
-                       ? References.Import(baseProperty.GetMethod)
+                       ? moduleWeaver.ModuleDefinition.ImportReference(baseProperty.GetMethod)
                        : null;
         }
 
@@ -309,7 +321,7 @@
         /// <returns>
         ///     The <see cref="PropertyDefinition" /> of the new property created.
         /// </returns>
-        public static PropertyDefinition CreateOverrideProperty(this TypeDefinition typeDefinition,
+        private static void CreateOverrideProperty(this TypeDefinition typeDefinition,
                                                                 string name,
                                                                 MethodReference basePropertyReferenceGetter,
                                                                 FieldReference backingFieldReference,
@@ -317,8 +329,7 @@
                                                                 TypeReference voidTypeReference,
                                                                 IEnumerable<CustomAttribute> customAttributes)
         {
-            var getterName = String.Format("get_{0}", name);
-
+            var getterName = $"get_{name}";
             var attributes = MethodAttributes.Family | MethodAttributes.HideBySig |
                              MethodAttributes.SpecialName | MethodAttributes.Virtual;
 
@@ -340,8 +351,6 @@
 
             typeDefinition.Methods.Add(getter);
             typeDefinition.Properties.Add(newProperty);
-
-            return newProperty;
         }
 
         private static MethodDefinition CreatePropertyGetter(string name,
@@ -441,7 +450,7 @@
         ///     The backing field containing the state.
         /// </param>
         /// <param name="systemType">
-        ///     The <see cref="TypeSystem" />s available.
+        ///     The <see cref="Mono.Cecil.TypeSystem" />s available.
         /// </param>
         /// <param name="customAttributes">
         ///     The <see cref="CustomAttribute" /> that will be added to the property.
@@ -451,11 +460,11 @@
         /// </param>
         public static void CreateIsDisposedProperty(this TypeDefinition type,
                                                     FieldReference backingDisposeField,
-                                                    TypeSystem systemType,
+                                                    global::Fody.TypeSystem systemType,
                                                     IEnumerable<CustomAttribute> customAttributes,
                                                     MethodReference baseIsDisposedPropertyGetter)
         {
-            type.CreateOverrideProperty("IsDisposed", baseIsDisposedPropertyGetter, backingDisposeField, systemType.Boolean, systemType.Void, customAttributes);
+            type.CreateOverrideProperty("IsDisposed", baseIsDisposedPropertyGetter, backingDisposeField, systemType.BooleanReference, systemType.VoidReference, customAttributes);
         }
     }
 }

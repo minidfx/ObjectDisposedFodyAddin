@@ -1,8 +1,8 @@
-﻿namespace ObjectDisposedFodyAddin
-{
-    using System;
-    using System.Reflection;
+﻿using System;
+using System.Reflection;
 
+namespace ObjectDisposed.Fody
+{
     /// <summary>
     ///     Thrown when an error occured while the injected in the <see cref="Assembly" />.
     /// </summary>

@@ -1,8 +1,8 @@
-﻿namespace ObjectDisposedFodyAddin.Extensions
-{
-    using Mono.Cecil;
-    using Mono.Cecil.Rocks;
+﻿using Mono.Cecil;
+using Mono.Cecil.Rocks;
 
+namespace ObjectDisposed.Fody.Extensions
+{
     /// <summary>
     ///     Contains extension methods for the any <see cref="MethodReference" />.
     /// </summary>

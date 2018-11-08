@@ -1,12 +1,12 @@
-﻿namespace ObjectDisposedFodyAddin
+﻿namespace ObjectDisposedFodyAddin.ReferenceAssembly
 {
+    using JetBrains.Annotations;
     using System;
 
     /// <summary>
-    ///     Indicates whether the process for injecting the guard must skip a type.
+    ///     Indicates whether the process for injecting the guard must be skipped.
     /// </summary>
     [AttributeUsage(AttributeTargets.Class)]
-    public sealed class SkipDisposeGuardAttribute : Attribute
-    {
-    }
+    [PublicAPI]
+    public sealed class SkipDisposeGuardAttribute : Attribute { }
 }

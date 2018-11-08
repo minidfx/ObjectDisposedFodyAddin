@@ -1,10 +1,9 @@
-﻿namespace ObjectDisposedFodyAddin.Extensions
+﻿using System;
+using System.Collections.Generic;
+using Mono.Cecil.Cil;
+
+namespace ObjectDisposed.Fody.Extensions
 {
-    using System;
-    using System.Collections.Generic;
-
-    using Mono.Cecil.Cil;
-
     /// <summary>
     ///     Contains extension methods for the any <see cref="ILProcessor" />.
     /// </summary>

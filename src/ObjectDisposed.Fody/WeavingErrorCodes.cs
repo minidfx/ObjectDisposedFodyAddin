@@ -1,4 +1,4 @@
-﻿namespace ObjectDisposedFodyAddin
+﻿namespace ObjectDisposed.Fody
 {
     /// <summary>
     ///     Weawing error codes.

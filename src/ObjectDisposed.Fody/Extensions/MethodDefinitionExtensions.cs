@@ -1,15 +1,14 @@
-﻿namespace ObjectDisposedFodyAddin.Extensions
+﻿using System;
+using System.CodeDom.Compiler;
+using System.Linq;
+using System.Runtime.CompilerServices;
+using System.Threading.Tasks;
+using Mono.Cecil;
+using Mono.Cecil.Cil;
+using Mono.Cecil.Rocks;
+
+namespace ObjectDisposed.Fody.Extensions
 {
-    using System;
-    using System.CodeDom.Compiler;
-    using System.Linq;
-    using System.Runtime.CompilerServices;
-    using System.Threading.Tasks;
-
-    using Mono.Cecil;
-    using Mono.Cecil.Cil;
-    using Mono.Cecil.Rocks;
-
     /// <summary>
     ///     Contains extension methods for the any <see cref="MethodReference" />.
     /// </summary>

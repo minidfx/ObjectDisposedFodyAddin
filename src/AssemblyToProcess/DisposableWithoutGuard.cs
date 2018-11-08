@@ -1,8 +1,8 @@
-﻿namespace AssemblyToProcess
+﻿using ObjectDisposedFodyAddin.ReferenceAssembly;
+
+namespace AssemblyToProcess
 {
     using System;
-
-    using ObjectDisposedFodyAddin;
 
     [SkipDisposeGuard]
     public class DisposableWithoutGuard : IDisposable
