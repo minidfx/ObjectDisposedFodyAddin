@@ -7,7 +7,6 @@ using Fody;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
 using Mono.Cecil.Rocks;
-using ObjectDisposedFodyAddin.ReferenceAssembly;
 
 namespace ObjectDisposed.Fody.Extensions
 {
