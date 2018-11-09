@@ -6,15 +6,10 @@
     <LangVersion>latest</LangVersion>
     <PlatformTarget>AnyCPU</PlatformTarget>
     <Authors>Benjamin Burgy</Authors>
-    <VersionPrefix>0.5.0</VersionPrefix>
+    <NuspecFile>ObjectDisposed.Fody.nuspec</NuspecFile>
+    <NoBuild>true</NoBuild>
+    <VersionPrefix>0.5.5</VersionPrefix>
     <VersionSuffix>alpha</VersionSuffix>
-    <GenerateAssemblyTitleAttribute>false</GenerateAssemblyTitleAttribute>
-    <GenerateAssemblyDescriptionAttribute>false</GenerateAssemblyDescriptionAttribute>
-    <GenerateAssemblyCompanyAttribute>false</GenerateAssemblyCompanyAttribute>
-    <GenerateAssemblyProductAttribute>false</GenerateAssemblyProductAttribute>
-    <GenerateAssemblyCopyrightAttribute>false</GenerateAssemblyCopyrightAttribute>
-    <GenerateAssemblyVersionAttribute>false</GenerateAssemblyVersionAttribute>
-    <GenerateAssemblyFileVersionAttribute>false</GenerateAssemblyFileVersionAttribute>
     <RootNamespace>ObjectDisposed.Fody</RootNamespace>
     <AssemblyName>ObjectDisposed.Fody</AssemblyName>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>

@@ -1,0 +1,22 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2012/06/nuspec.xsd">
+  <metadata>
+    <id>ObjectDisposed.Fody</id>
+    <version>0.5.5-alpha</version>
+    <title>ObjectDisposed.Fody</title>
+    <authors>Benjamin Burgy</authors>
+    <owners>Benjamin Burgy</owners>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>Fody Addin to throw an ObjectDisposedException if the an object has been already disposed. Supports IDisposable and IAsyncDisposable.</description>
+    <dependencies>
+      <group targetFramework=".NETStandard2.0">
+        <dependency id="Fody" version="3.2.16" include="All" />
+      </group>
+    </dependencies>
+  </metadata>
+  <files>
+    <file src="bin\Release\netstandard2.0\ObjectDisposed.Fody.dll" target="netstandardweaver\ObjectDisposed.Fody.dll" />
+    <file src="bin\Release\netstandard2.0\ObjectDisposed.Fody.xml" target="netstandardweaver\ObjectDisposed.Fody.xml" />
+    <file src="bin\Release\netstandard2.0\ObjectDisposedFodyAddin.ReferenceAssembly.dll" target="lib\netstandard2.0\ObjectDisposedFodyAddin.ReferenceAssembly.dll" />
+  </files>
+</package>
