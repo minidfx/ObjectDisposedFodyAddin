@@ -29,7 +29,7 @@ namespace ObjectDisposed.Fody.Extensions
                                                  TypeReference taskTypeReference)
         {
             var ilProcessor = methodDefinition.Body.GetILProcessor();
-            var continueTheTaskInstuctions = Instructions.GetPartialContinueWithInstructions(ilProcessor, setToDisposedMethodReference, taskTypeReference)
+            var continueTheTaskInstructions = Instructions.GetPartialContinueWithInstructions(ilProcessor, setToDisposedMethodReference, taskTypeReference)
                                                          .ToArray();
 
             var returnInstructions = ilProcessor.Body.Instructions
@@ -38,7 +38,7 @@ namespace ObjectDisposed.Fody.Extensions
 
             foreach (var returnInstruction in returnInstructions)
             {
-                ilProcessor.InsertBeforeRange(returnInstruction, continueTheTaskInstuctions);
+                ilProcessor.InsertBeforeRange(returnInstruction, continueTheTaskInstructions);
             }
 
             methodDefinition.Body.OptimizeMacros();

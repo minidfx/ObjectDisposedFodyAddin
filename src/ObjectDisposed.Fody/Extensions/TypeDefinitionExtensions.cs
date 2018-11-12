@@ -7,6 +7,7 @@ using Fody;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
 using Mono.Cecil.Rocks;
+using ObjectDisposedFodyAddin.ReferenceAssembly;
 
 namespace ObjectDisposed.Fody.Extensions
 {
@@ -265,11 +266,11 @@ namespace ObjectDisposed.Fody.Extensions
                 }
             }
 
-            return default(T);
+            return default;
         }
 
         /// <summary>
-        ///     Fetchs and returns the IsDisposed property.
+        ///     Fetch and returns the IsDisposed property.
         /// </summary>
         /// <param name="typeDefinition">
         ///     The <see cref="Type" /> that we want to extend.
@@ -311,9 +312,6 @@ namespace ObjectDisposed.Fody.Extensions
         /// <param name="propertyTypeReference">
         ///     The type of the property.
         /// </param>
-        /// <param name="voidTypeReference">
-        ///     The system void type reference.
-        /// </param>
         /// <param name="customAttributes">
         ///     The <see cref="CustomAttribute" /> that will be apply on the property.
         /// </param>
@@ -325,7 +323,6 @@ namespace ObjectDisposed.Fody.Extensions
                                                                 MethodReference basePropertyReferenceGetter,
                                                                 FieldReference backingFieldReference,
                                                                 TypeReference propertyTypeReference,
-                                                                TypeReference voidTypeReference,
                                                                 IEnumerable<CustomAttribute> customAttributes)
         {
             var getterName = $"get_{name}";
@@ -463,7 +460,7 @@ namespace ObjectDisposed.Fody.Extensions
                                                     IEnumerable<CustomAttribute> customAttributes,
                                                     MethodReference baseIsDisposedPropertyGetter)
         {
-            type.CreateOverrideProperty("IsDisposed", baseIsDisposedPropertyGetter, backingDisposeField, systemType.BooleanReference, systemType.VoidReference, customAttributes);
+            type.CreateOverrideProperty("IsDisposed", baseIsDisposedPropertyGetter, backingDisposeField, systemType.BooleanReference, customAttributes);
         }
     }
 }

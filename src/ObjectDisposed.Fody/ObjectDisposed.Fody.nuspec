@@ -2,7 +2,7 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2012/06/nuspec.xsd">
   <metadata>
     <id>ObjectDisposed.Fody</id>
-    <version>0.5.5-alpha</version>
+    <version>0.5.6-alpha</version>
     <title>ObjectDisposed.Fody</title>
     <authors>Benjamin Burgy</authors>
     <owners>Benjamin Burgy</owners>

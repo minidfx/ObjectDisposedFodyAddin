@@ -1,4 +1,6 @@
-﻿namespace ObjectDisposed.Fody
+﻿using System.Threading.Tasks;
+
+namespace ObjectDisposed.Fody
 {
     using System;
     using System.Collections.Generic;
