@@ -3,6 +3,11 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
 VisualStudioVersion = 15.0.27703.2026
 MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solutions items", "Solutions items", "{20356B0F-39BA-422A-AFB2-716833BA32B2}"
+	ProjectSection(SolutionItems) = preProject
+		.travis.yml = .travis.yml
+	EndProjectSection
+EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ObjectDisposed.Fody", "src\ObjectDisposed.Fody\ObjectDisposed.Fody.csproj", "{3365A790-2D6F-439A-A22D-25341B54618F}"
 	ProjectSection(ProjectDependencies) = postProject
 		{193E4E8B-08C7-4048-9B7F-CCB1542EF4D0} = {193E4E8B-08C7-4048-9B7F-CCB1542EF4D0}
