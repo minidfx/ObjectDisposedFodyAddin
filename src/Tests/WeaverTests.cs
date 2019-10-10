@@ -4,9 +4,7 @@
 using System;
 using System.IO;
 using System.Linq;
-using System.Reflection;
 using Fody;
-using Microsoft.Extensions.DependencyModel;
 using Mono.Cecil;
 using NUnit.Framework;
 using ObjectDisposed.Fody;
@@ -27,9 +25,9 @@ namespace Tests
                 public void SetUp()
                 {
                     var weaverResult = TryToLoadAssembly("AssemblyToProcess.csproj");
-                    Instance = GetInstance(weaverResult);
-                    
-                    MethodCalled();
+                    this.Instance = this.GetInstance(weaverResult);
+
+                    this.MethodCalled();
                 }
 
                 public abstract class with_exceptions_expected : with_AssemblyToProcess
@@ -45,19 +43,19 @@ namespace Tests
                         {
                             protected override void MethodCalled()
                             {
-                                Instance.Dispose();
+                                this.Instance.Dispose();
                             }
 
                             [Test]
                             public void then_ObjectDisposedException_is_throwing_with_DoNothing()
                             {
-                                Assert.Throws<ObjectDisposedException>(() => Instance.DoNothing());
+                                Assert.Throws<ObjectDisposedException>(() => this.Instance.DoNothing());
                             }
 
                             [Test]
                             public void then_ObjectDisposedException_is_throwing_with_DoSomething()
                             {
-                                Assert.Throws<ObjectDisposedException>(() => Instance.DoSomething());
+                                Assert.Throws<ObjectDisposedException>(() => this.Instance.DoSomething());
                             }
                         }
                     }
@@ -73,13 +71,13 @@ namespace Tests
                         {
                             protected override void MethodCalled()
                             {
-                                Instance.Dispose();
+                                this.Instance.Dispose();
                             }
 
                             [Test]
                             public void then_ObjectDisposedException_is_throwing_with_DoSomething()
                             {
-                                Assert.Throws<ObjectDisposedException>(() => Instance.DoSomething());
+                                Assert.Throws<ObjectDisposedException>(() => this.Instance.DoSomething());
                             }
                         }
                     }
@@ -95,7 +93,7 @@ namespace Tests
                         {
                             protected override void MethodCalled()
                             {
-                                Instance.Dispose();
+                                this.Instance.Dispose();
                             }
                         }
                     }
@@ -111,13 +109,13 @@ namespace Tests
                         {
                             protected override void MethodCalled()
                             {
-                                Instance.DisposeAsync().Wait();
+                                this.Instance.DisposeAsync().Wait();
                             }
 
                             [Test]
                             public void then_ObjectDisposedException_is_throwing_with_DoSomethingAsync()
                             {
-                                Assert.Throws<ObjectDisposedException>(() => Instance.DoSomethingAsync());
+                                Assert.Throws<ObjectDisposedException>(() => this.Instance.DoSomethingAsync());
                             }
                         }
                     }
@@ -133,13 +131,13 @@ namespace Tests
                         {
                             protected override void MethodCalled()
                             {
-                                Instance.DisposeAsync().Wait(); // Wait for the task is completely finished.
+                                this.Instance.DisposeAsync().Wait(); // Wait for the task is completely finished.
                             }
 
                             [Test]
                             public void then_ObjectDisposedException_is_throwing_with_DoSomething()
                             {
-                                Assert.Throws<ObjectDisposedException>(() => Instance.DoSomething());
+                                Assert.Throws<ObjectDisposedException>(() => this.Instance.DoSomething());
                             }
                         }
                     }
@@ -155,7 +153,7 @@ namespace Tests
                         {
                             protected override void MethodCalled()
                             {
-                                Instance.DisposeAsync().Wait(); // Wait for the task is completely finished.
+                                this.Instance.DisposeAsync().Wait(); // Wait for the task is completely finished.
                             }
                         }
                     }
@@ -171,7 +169,7 @@ namespace Tests
                         {
                             protected override void MethodCalled()
                             {
-                                Instance.DisposeAsync().Wait();
+                                this.Instance.DisposeAsync().Wait();
                             }
                         }
                     }
@@ -187,13 +185,13 @@ namespace Tests
                         {
                             protected override void MethodCalled()
                             {
-                                Instance.DisposeAsync().Wait();
+                                this.Instance.DisposeAsync().Wait();
                             }
 
                             [Test]
                             public void then_ObjectDisposedException_is_throwing_with_DoSomething()
                             {
-                                Assert.Throws<ObjectDisposedException>(() => Instance.DoSomething());
+                                Assert.Throws<ObjectDisposedException>(() => this.Instance.DoSomething());
                             }
                         }
                     }
@@ -210,13 +208,13 @@ namespace Tests
                     {
                         protected override void MethodCalled()
                         {
-                            Instance.DisposeAsync();
+                            this.Instance.DisposeAsync();
                         }
 
                         [Test]
                         public void then_SayMeHello_equals_Hello()
                         {
-                            Assert.AreEqual("Hello", Instance.SayMeHello());
+                            Assert.AreEqual("Hello", this.Instance.SayMeHello());
                         }
                     }
                 }
@@ -232,13 +230,13 @@ namespace Tests
                     {
                         protected override void MethodCalled()
                         {
-                            Instance.Dispose();
+                            this.Instance.Dispose();
                         }
 
                         [Test]
                         public void then_Result_equals_to_Hello_World()
                         {
-                            Assert.AreEqual("Hello World!", Instance.SayMeHelloWorld());
+                            Assert.AreEqual("Hello World!", this.Instance.SayMeHelloWorld());
                         }
                     }
                 }
@@ -252,8 +250,8 @@ namespace Tests
             [SetUp]
             public void SetUp()
             {
-                ProjectName = EstablishProjectName();
-                ExpectedErrorCode = EstablishErrorCode();
+                this.ProjectName = this.EstablishProjectName();
+                this.ExpectedErrorCode = this.EstablishErrorCode();
             }
 
             public sealed class with_AssemblyToProcessWithInvalidType : with_invalid_assembly
@@ -293,8 +291,8 @@ namespace Tests
             [Test]
             public void then_load_assembly_failed()
             {
-                var exception = Assert.Throws<WeavingException>(() => { TryToLoadAssembly(ProjectName + ".csproj"); });
-                Assert.AreEqual(ExpectedErrorCode, exception.ErrorCode);
+                var exception = Assert.Throws<WeavingException>(() => { TryToLoadAssembly(this.ProjectName + ".csproj"); });
+                Assert.AreEqual(this.ExpectedErrorCode, exception.ErrorCode);
             }
         }
 

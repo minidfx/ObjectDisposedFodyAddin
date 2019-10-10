@@ -256,6 +256,7 @@ namespace ObjectDisposed.Fody
             this.LogInfo("ObjectDisposedFodyAddin is canceled while the execution.");
         }
 
+        /// <inheritdoc />
         public override IEnumerable<string> GetAssembliesForScanning()
         {
             yield return "mscorlib";
