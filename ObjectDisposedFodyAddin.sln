@@ -6,6 +6,7 @@ MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solutions items", "Solutions items", "{20356B0F-39BA-422A-AFB2-716833BA32B2}"
 	ProjectSection(SolutionItems) = preProject
 		.travis.yml = .travis.yml
+		README.md = README.md
 	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ObjectDisposed.Fody", "src\ObjectDisposed.Fody\ObjectDisposed.Fody.csproj", "{3365A790-2D6F-439A-A22D-25341B54618F}"
