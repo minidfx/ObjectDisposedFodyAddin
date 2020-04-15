@@ -5,6 +5,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\AssemblyToProcessExternalDependencies\AssemblyToProcessExternalDependencies.csproj" />
     <ProjectReference Include="..\ReferenceAssembly\ReferenceAssembly.csproj" />
   </ItemGroup>
 
