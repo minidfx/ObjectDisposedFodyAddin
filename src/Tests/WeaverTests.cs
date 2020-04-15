@@ -338,7 +338,8 @@ namespace Tests
 
             var assemblyPath = Path.Combine(projectOutput, $"{projectName}.dll");
             var fodyTemp = Path.Combine(projectOutput, "fodytemp");
-
+            Directory.CreateDirectory(fodyTemp);
+            
             var weaver = new ModuleWeaver();
             
             foreach (var dependency in dependencies)
