@@ -89,7 +89,7 @@ namespace Tests
                     {
                         protected override dynamic GetInstance(TestResult weaverResult)
                         {
-                            return weaverResult.GetInstance("AssemblyToProcess.DisposableChild");
+                            return weaverResult.GetInstance("AssemblyToProcess.DisposableChildWithOverride");
                         }
 
                         public sealed class when_Dispose_is_called : with_DisposableChildWithOverride_class
@@ -122,9 +122,15 @@ namespace Tests
                             }
                             
                             [Test]
-                            public void then_ObjectDisposedException_is_throwing_with_DoSomething()
+                            public void then_ObjectDisposedException_is_throwing_with_SayMeHelloWorld()
                             {
                                 Assert.Throws<ObjectDisposedException>(() => this.Instance.SayMeHelloWorld());
+                            }
+                            
+                            [Test]
+                            public void then_ObjectDisposedException_is_throwing_with_DoSomething()
+                            {
+                                Assert.Throws<ObjectDisposedException>(() => this.Instance.DoSomething());
                             }
                         }
                     }

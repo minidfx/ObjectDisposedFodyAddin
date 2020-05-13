@@ -19,7 +19,7 @@ namespace ObjectDisposed.Fody
         /// <param name="ilProcessor">
         ///     Service for managing instructions of a method.
         /// </param>
-        /// <param name="memberReference">
+        /// <param name="typeDefinition">
         ///     The reference of the member, which contains the method.
         /// </param>
         /// <param name="isDisposedPropertyReference">
@@ -32,7 +32,7 @@ namespace ObjectDisposed.Fody
         ///     The <see cref="Instruction" />s yielded.
         /// </returns>
         public static IEnumerable<Instruction> GetGuardInstructions(ILProcessor ilProcessor,
-                                                                    MemberReference memberReference,
+                                                                    TypeDefinition typeDefinition,
                                                                     MethodReference isDisposedPropertyReference,
                                                                     MethodReference objectDisposedExceptionReference)
         {
@@ -42,13 +42,20 @@ namespace ObjectDisposed.Fody
             yield return ilProcessor.Create(OpCodes.Ldarg_0);
 
             // Call the parent method
-            yield return ilProcessor.Create(OpCodes.Call, isDisposedPropertyReference);
+            if (typeDefinition.IsAbstract)
+            {
+                yield return ilProcessor.Create(OpCodes.Callvirt, isDisposedPropertyReference);    
+            }
+            else
+            {
+                yield return ilProcessor.Create(OpCodes.Call, isDisposedPropertyReference);
+            }
 
             // Branch to the normal way whether the value on the stack is equals to 0
             yield return ilProcessor.Create(OpCodes.Brfalse_S, normalWay);
 
             // Push the class name on the stack
-            yield return ilProcessor.Create(OpCodes.Ldstr, memberReference.Name);
+            yield return ilProcessor.Create(OpCodes.Ldstr, typeDefinition.Name);
 
             // Call the constructor with the previous string pushed
             yield return ilProcessor.Create(OpCodes.Newobj, objectDisposedExceptionReference);

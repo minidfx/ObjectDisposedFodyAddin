@@ -4,6 +4,7 @@
     {
         public override void Dispose()
         {
+            base.Dispose();
         }
 
         public string SayMeHelloWorld()

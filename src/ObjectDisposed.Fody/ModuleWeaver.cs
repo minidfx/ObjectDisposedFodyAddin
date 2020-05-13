@@ -111,15 +111,18 @@ namespace ObjectDisposed.Fody
 
                     // Set the field isDisposed to True
                     disposeMethod.AddSetIsDisposedSync(backingDisposeField);
+
+                    // Add guard instructions into any public members of the type
+                    type.AddGuardInstructions(objectDisposedConstructorMethodReference, isDisposedBasePropertyGetter);
                 }
                 else if (isDisposedBasePropertyGetter != null)
                 {
                     // Create the protected virtual property IsDisposed
                     type.CreateIsDisposedProperty(null, this.TypeSystem, new[] { generatedCodeCustomAttribute }, isDisposedBasePropertyGetter);
+
+                    // Add guard instructions into any public members of the type
+                    type.AddGuardInstructions(objectDisposedConstructorMethodReference, isDisposedBasePropertyGetter);
                 }
-                
-                // Add guard instructions into any public members of the type
-                type.AddGuardInstructions(objectDisposedConstructorMethodReference, isDisposedBasePropertyGetter);
 
                 this.LogInfo($"{type.FullName} modified.");
             }
@@ -177,15 +180,17 @@ namespace ObjectDisposed.Fody
 
                     // Add instructions to dispose the object when the output task is finished
                     disposeAsyncMethod.AddSetIsDisposedAsync(functionContinueWith, taskTypeReference);
+                    // Add guard instructions into any public members of the type
+                    asyncType.AddGuardInstructions(objectDisposedConstructorMethodReference, isDisposedBasePropertyGetter);
                 }
                 else
                 {
                     // Create the protected virtual property IsDisposed
                     asyncType.CreateIsDisposedProperty(null, this.TypeSystem, new[] { generatedCodeCustomAttribute }, isDisposedBasePropertyGetter);
+
+                    // Add guard instructions into any public members of the type
+                    asyncType.AddGuardInstructions(objectDisposedConstructorMethodReference, isDisposedBasePropertyGetter);
                 }
-                
-                // Add guard instructions into any public members of the type
-                asyncType.AddGuardInstructions(objectDisposedConstructorMethodReference, isDisposedBasePropertyGetter);
 
                 this.LogInfo($"{asyncType.FullName} modified.");
             }

@@ -4,8 +4,13 @@
 
     public abstract class DisposableGenericBase<T> : IDisposable
     {
-        public virtual void Dispose()
+        public void Dispose()
         {
+        }
+        
+        public void DoSomething()
+        {
+            Console.WriteLine("Yuhuu!");
         }
     }
 }

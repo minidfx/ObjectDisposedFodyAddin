@@ -57,7 +57,10 @@ namespace ObjectDisposed.Fody.Extensions
                                                  TypeReference returnTypeReference,
                                                  IEnumerable<CustomAttribute> customAttributes)
         {
-            var fieldDefinition = new FieldDefinition(name, fieldAttributes, returnTypeReference);
+            var fieldDefinition = new FieldDefinition(name, fieldAttributes, returnTypeReference)
+                                  {
+                                      DeclaringType = typeDefinition
+                                  };
 
             foreach (var customAttribute in customAttributes)
             {
@@ -353,7 +356,12 @@ namespace ObjectDisposed.Fody.Extensions
                               ? MethodAttributes.NewSlot
                               : MethodAttributes.ReuseSlot;
 
-            var getter = CreatePropertyGetter(getterName, attributes, basePropertyReferenceGetter, propertyTypeReference, backingFieldReference);
+            var getter = CreatePropertyGetter(getterName,
+                                              attributes,
+                                              basePropertyReferenceGetter,
+                                              propertyTypeReference,
+                                              backingFieldReference,
+                                              typeDefinition);
             var newProperty = new PropertyDefinition(name, PropertyAttributes.Unused, propertyTypeReference)
                               {
                                   GetMethod = getter
@@ -372,9 +380,13 @@ namespace ObjectDisposed.Fody.Extensions
                                                              MethodAttributes attributes,
                                                              MethodReference propertyReferenceGetter,
                                                              TypeReference propertyType,
-                                                             FieldReference backingFieldReference)
+                                                             FieldReference backingFieldReference,
+                                                             TypeDefinition typeDefinition)
         {
-            var getter = new MethodDefinition(name, attributes, propertyType);
+            var getter = new MethodDefinition(name, attributes, propertyType)
+                         {
+                             DeclaringType = typeDefinition
+                         };
             var ilProcessor = getter.Body.GetILProcessor();
 
             var instructions = Instructions.GetIsDisposedInstructionsGetter(ilProcessor, propertyReferenceGetter, backingFieldReference);
