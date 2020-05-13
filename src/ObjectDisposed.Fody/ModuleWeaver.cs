@@ -199,14 +199,14 @@ namespace ObjectDisposed.Fody
 
         private TypeReference GetTaskTypeReference()
         {
-            var taskTypeDefinition = this.FindType("System.Threading.Tasks.Task");
+            var taskTypeDefinition = this.FindTypeDefinition("System.Threading.Tasks.Task");
 
             return this.ModuleDefinition.ImportReference(taskTypeDefinition);
         }
 
         private MethodReference GetActionAsTaskConstructor(TypeReference taskTypeReference)
         {
-            var actionConstructorMethodDefinition = this.FindType("System.Action`1");
+            var actionConstructorMethodDefinition = this.FindTypeDefinition("System.Action`1");
 
             var actionTypeReference = this.ModuleDefinition.ImportReference(actionConstructorMethodDefinition);
             var actionGenericInstance = actionTypeReference.MakeGenericInstanceType(taskTypeReference);
@@ -219,7 +219,7 @@ namespace ObjectDisposed.Fody
 
         private MethodReference GetObjectDisposedExceptionConstructor()
         {            
-            var objectDisposedExceptionConstructor = this.FindType("System.ObjectDisposedException")
+            var objectDisposedExceptionConstructor = this.FindTypeDefinition("System.ObjectDisposedException")
                                                                           .Methods.Single(x => x.IsConstructor &&
                                                                                                x.Parameters.Count() == 1 &&
                                                                                                x.Parameters.All(p => p.ParameterType.FullName == "System.String"));
@@ -228,8 +228,9 @@ namespace ObjectDisposed.Fody
 
         private CustomAttribute GetGeneratedCodeAttribute()
         {
-            var generateCodeAttributeDefinition =  this.FindType("System.CodeDom.Compiler.GeneratedCodeAttribute")
-                                                                       .Methods.Single(x => x.IsConstructor && x.Parameters.Count == 2);
+            var generateCodeAttributeDefinition = this.FindTypeDefinition("System.CodeDom.Compiler.GeneratedCodeAttribute")
+                                                      .Methods
+                                                      .Single(x => x.IsConstructor && x.Parameters.Count == 2);
             var assemblyFileVersion = Assembly.GetExecutingAssembly().GetName().Version.ToString();
             var customAttribute = new CustomAttribute(this.ModuleDefinition.ImportReference(generateCodeAttributeDefinition));
             
@@ -241,7 +242,7 @@ namespace ObjectDisposed.Fody
 
         private MethodReference GetTaskContinueWithMethodReference()
         {
-            var continueWithMethodDefinition = this.FindType("System.Threading.Tasks.Task")
+            var continueWithMethodDefinition = this.FindTypeDefinition("System.Threading.Tasks.Task")
                                                                     .Methods.Single(x => x.Name.Equals("ContinueWith") &&
                                                                                          x.Parameters.Any(p => p.ParameterType.Name == "Action`1") &&
                                                                                          x.Parameters.Count == 1);
