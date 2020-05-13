@@ -6,7 +6,7 @@
     <PlatformTarget>AnyCPU</PlatformTarget>
     <Authors>Benjamin Burgy</Authors>
     <NuspecFile>ObjectDisposed.Fody.nuspec</NuspecFile>
-    <VersionPrefix>0.9.0.0</VersionPrefix>
+    <VersionPrefix>0.9.5.0</VersionPrefix>
     <VersionSuffix>beta</VersionSuffix>
     <RootNamespace>ObjectDisposed.Fody</RootNamespace>
     <AssemblyName>ObjectDisposed.Fody</AssemblyName>
