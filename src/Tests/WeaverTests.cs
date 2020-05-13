@@ -98,6 +98,34 @@ namespace Tests
                             {
                                 this.Instance.Dispose();
                             }
+                            
+                            [Test]
+                            public void then_ObjectDisposedException_is_throwing_with_DoSomething()
+                            {
+                                Assert.Throws<ObjectDisposedException>(() => this.Instance.SayMeHelloWorld());
+                            }
+                        }
+                    }
+                    
+                    public abstract class with_DisposableGenericVersion_class : with_exceptions_expected
+                    {
+                        protected override dynamic GetInstance(TestResult weaverResult)
+                        {
+                            return weaverResult.GetInstance("AssemblyToProcess.DisposableGenericVersion");
+                        }
+
+                        public sealed class when_Dispose_is_called : with_DisposableChildWithOverride_class
+                        {
+                            protected override void MethodCalled()
+                            {
+                                this.Instance.Dispose();
+                            }
+                            
+                            [Test]
+                            public void then_ObjectDisposedException_is_throwing_with_DoSomething()
+                            {
+                                Assert.Throws<ObjectDisposedException>(() => this.Instance.SayMeHelloWorld());
+                            }
                         }
                     }
 
@@ -158,6 +186,12 @@ namespace Tests
                             {
                                 this.Instance.DisposeAsync().Wait(); // Wait for the task is completely finished.
                             }
+                            
+                            [Test]
+                            public void then_ObjectDisposedException_is_throwing_with_SayMeHello()
+                            {
+                                Assert.Throws<ObjectDisposedException>(() => this.Instance.SayMeHelloWorld());
+                            }
                         }
                     }
 
@@ -173,6 +207,12 @@ namespace Tests
                             protected override void MethodCalled()
                             {
                                 this.Instance.DisposeAsync().Wait();
+                            }
+                            
+                            [Test]
+                            public void then_ObjectDisposedException_is_throwing_with_SayMeHello()
+                            {
+                                Assert.Throws<ObjectDisposedException>(() => this.Instance.SayMeHello());
                             }
                         }
                     }
@@ -366,10 +406,11 @@ namespace Tests
                                                            return File.Exists(localAssemblyPath) ? Assembly.LoadFile(localAssemblyPath) : null;
                                                        };
 
-            var testResult = weaver.ExecuteTestRun(assemblyPath);
-
+            var testResult = weaver.ExecuteTestRun(assemblyPath, runPeVerify: false);
             testResult.PrintAll();
 
+            weaver.ExecuteTestRun(assemblyPath, runPeVerify: true);
+            
             return testResult;
         }
     }

@@ -101,25 +101,25 @@ namespace ObjectDisposed.Fody
                 if (disposeMethod != null)
                 {
                     // Create the isDisposed field
-                    var backingDisposeField = type.CreateField("isDisposed", FieldAttributes.Private, this.TypeSystem.BooleanReference, new[] { generatedCodeCustomAttribute });
+                    var backingDisposeField = type.CreateField("isDisposed",
+                                                               FieldAttributes.Private,
+                                                               this.TypeSystem.BooleanReference,
+                                                               new[] { generatedCodeCustomAttribute });
 
                     // Create the protected virtual property IsDisposed
                     type.CreateIsDisposedProperty(backingDisposeField, this.TypeSystem, new[] { generatedCodeCustomAttribute }, isDisposedBasePropertyGetter);
 
                     // Set the field isDisposed to True
                     disposeMethod.AddSetIsDisposedSync(backingDisposeField);
-
-                    // Add guard instructions into any public members of the type
-                    type.AddGuardInstructions(objectDisposedConstructorMethodReference, isDisposedBasePropertyGetter);
                 }
                 else if (isDisposedBasePropertyGetter != null)
                 {
                     // Create the protected virtual property IsDisposed
                     type.CreateIsDisposedProperty(null, this.TypeSystem, new[] { generatedCodeCustomAttribute }, isDisposedBasePropertyGetter);
-
-                    // Add guard instructions into any public members of the type
-                    type.AddGuardInstructions(objectDisposedConstructorMethodReference, isDisposedBasePropertyGetter);
                 }
+                
+                // Add guard instructions into any public members of the type
+                type.AddGuardInstructions(objectDisposedConstructorMethodReference, isDisposedBasePropertyGetter);
 
                 this.LogInfo($"{type.FullName} modified.");
             }
@@ -160,8 +160,8 @@ namespace ObjectDisposed.Fody
                     // INFO: [MiniDfx 23.05.15 15:23] This is not a lambda expression, It's just a simple method but for a better understanding what I do, I called it lambda.
                     var lambdaSetToDisposed = asyncType.CreateMethod("SetToDisposed",
                                                                      MethodAttributes.Private | MethodAttributes.HideBySig,
-                        this.TypeSystem.VoidReference,
-                        new[] { generatedCodeCustomAttribute },
+                                                                     this.TypeSystem.VoidReference,
+                                                                     new[] { generatedCodeCustomAttribute },
                                                                      i => Instructions.GetSetToDisposeFullInstructions(i, backingDisposeField));
 
                     lambdaSetToDisposed.Parameters.Add(new ParameterDefinition(taskTypeReference));
@@ -177,18 +177,15 @@ namespace ObjectDisposed.Fody
 
                     // Add instructions to dispose the object when the output task is finished
                     disposeAsyncMethod.AddSetIsDisposedAsync(functionContinueWith, taskTypeReference);
-
-                    // Add guard instructions into any public members of the type
-                    asyncType.AddGuardInstructions(objectDisposedConstructorMethodReference, isDisposedBasePropertyGetter);
                 }
                 else
                 {
                     // Create the protected virtual property IsDisposed
                     asyncType.CreateIsDisposedProperty(null, this.TypeSystem, new[] { generatedCodeCustomAttribute }, isDisposedBasePropertyGetter);
-
-                    // Add guard instructions into any public members of the type
-                    asyncType.AddGuardInstructions(objectDisposedConstructorMethodReference, isDisposedBasePropertyGetter);
                 }
+                
+                // Add guard instructions into any public members of the type
+                asyncType.AddGuardInstructions(objectDisposedConstructorMethodReference, isDisposedBasePropertyGetter);
 
                 this.LogInfo($"{asyncType.FullName} modified.");
             }

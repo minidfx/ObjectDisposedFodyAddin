@@ -60,7 +60,8 @@ namespace ObjectDisposed.Fody.Extensions
             var setToDisposedInstructions = Instructions.GetSetToDisposedMethodPartialInstructions(ilProcessor, fieldReference)
                                                         .ToArray();
 
-            var returnInstructions = ilProcessor.Body.Instructions
+            var returnInstructions = ilProcessor.Body
+                                                .Instructions
                                                 .Where(x => x.OpCode.Code == Code.Ret)
                                                 .ToArray();
 

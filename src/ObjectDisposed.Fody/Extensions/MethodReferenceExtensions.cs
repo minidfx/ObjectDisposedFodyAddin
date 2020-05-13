@@ -23,10 +23,9 @@ namespace ObjectDisposed.Fody.Extensions
         public static MethodReference MakeHostInstanceGeneric(this MethodReference methodReference,
                                                               params TypeReference[] args)
         {
-            var instance = new MethodReference(
-                methodReference.Name,
-                methodReference.ReturnType,
-                methodReference.DeclaringType.MakeGenericInstanceType(args))
+            var instance = new MethodReference(methodReference.Name,
+                                               methodReference.ReturnType,
+                                               methodReference.DeclaringType.MakeGenericInstanceType(args))
                                {
                                    HasThis = methodReference.HasThis,
                                    ExplicitThis = methodReference.ExplicitThis,

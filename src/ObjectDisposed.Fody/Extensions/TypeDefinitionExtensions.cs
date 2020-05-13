@@ -289,9 +289,29 @@ namespace ObjectDisposed.Fody.Extensions
                                                            x => x.Properties.SingleOrDefault(Predicate),
                                                            moduleWeaver);
 
-            return baseProperty != null
-                       ? moduleWeaver.ModuleDefinition.ImportReference(baseProperty.GetMethod)
-                       : null;
+            var isGenericType = typeDefinition.BaseType is GenericInstanceType;
+            moduleWeaver.LogDebug($"Searching the base property IsDisposed for the type {typeDefinition.FullName}(baseType={typeDefinition.BaseType.FullName}, isBaseGeneric={isGenericType} ...");
+
+            if (baseProperty is null)
+            {
+                return null;
+            }
+
+            if (typeDefinition.BaseType is GenericInstanceType genericInstanceType)
+            {
+                moduleWeaver.LogDebug($"Found the generic baseProperty: {baseProperty.GetMethod.FullName}");
+                return new MethodReference(baseProperty.GetMethod.Name,
+                                           baseProperty.GetMethod.ReturnType,
+                                           genericInstanceType)
+                       {
+                           HasThis = baseProperty.GetMethod.HasThis,
+                           ExplicitThis = baseProperty.GetMethod.ExplicitThis,
+                           CallingConvention = baseProperty.GetMethod.CallingConvention
+                       };
+            }
+
+            moduleWeaver.LogDebug($"Found the baseProperty: {baseProperty.GetMethod.FullName}");
+            return moduleWeaver.ModuleDefinition.ImportReference(baseProperty.GetMethod);
         }
 
         /// <summary>
@@ -318,12 +338,12 @@ namespace ObjectDisposed.Fody.Extensions
         /// <returns>
         ///     The <see cref="PropertyDefinition" /> of the new property created.
         /// </returns>
-        private static void CreateOverrideProperty(this TypeDefinition typeDefinition,
-                                                                string name,
-                                                                MethodReference basePropertyReferenceGetter,
-                                                                FieldReference backingFieldReference,
-                                                                TypeReference propertyTypeReference,
-                                                                IEnumerable<CustomAttribute> customAttributes)
+        private static void CreateIsDisposedProperty(this TypeDefinition typeDefinition,
+                                                    string name,
+                                                    MethodReference basePropertyReferenceGetter,
+                                                    FieldReference backingFieldReference,
+                                                    TypeReference propertyTypeReference,
+                                                    IEnumerable<CustomAttribute> customAttributes)
         {
             var getterName = $"get_{name}";
             var attributes = MethodAttributes.Family | MethodAttributes.HideBySig |
@@ -334,11 +354,10 @@ namespace ObjectDisposed.Fody.Extensions
                               : MethodAttributes.ReuseSlot;
 
             var getter = CreatePropertyGetter(getterName, attributes, basePropertyReferenceGetter, propertyTypeReference, backingFieldReference);
-
             var newProperty = new PropertyDefinition(name, PropertyAttributes.Unused, propertyTypeReference)
-                                  {
-                                      GetMethod = getter
-                                  };
+                              {
+                                  GetMethod = getter
+                              };
 
             foreach (var customAttribute in customAttributes)
             {
@@ -356,7 +375,6 @@ namespace ObjectDisposed.Fody.Extensions
                                                              FieldReference backingFieldReference)
         {
             var getter = new MethodDefinition(name, attributes, propertyType);
-
             var ilProcessor = getter.Body.GetILProcessor();
 
             var instructions = Instructions.GetIsDisposedInstructionsGetter(ilProcessor, propertyReferenceGetter, backingFieldReference);
@@ -460,7 +478,7 @@ namespace ObjectDisposed.Fody.Extensions
                                                     IEnumerable<CustomAttribute> customAttributes,
                                                     MethodReference baseIsDisposedPropertyGetter)
         {
-            type.CreateOverrideProperty("IsDisposed", baseIsDisposedPropertyGetter, backingDisposeField, systemType.BooleanReference, customAttributes);
+            type.CreateIsDisposedProperty("IsDisposed", baseIsDisposedPropertyGetter, backingDisposeField, systemType.BooleanReference, customAttributes);
         }
     }
 }

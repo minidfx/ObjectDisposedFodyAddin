@@ -1,6 +1,6 @@
 ﻿namespace AssemblyToProcess
 {
-    public class DiposableChildWithOverride : DisposableBase
+    public class DisposableChildWithOverride : DisposableBase
     {
         public override void Dispose()
         {

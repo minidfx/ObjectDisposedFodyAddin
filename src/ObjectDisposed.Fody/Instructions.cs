@@ -22,7 +22,7 @@ namespace ObjectDisposed.Fody
         /// <param name="memberReference">
         ///     The reference of the member, which contains the method.
         /// </param>
-        /// <param name="isDisposedPropertyDefinition">
+        /// <param name="isDisposedPropertyReference">
         ///     The isDisposed field.
         /// </param>
         /// <param name="objectDisposedExceptionReference">
@@ -33,7 +33,7 @@ namespace ObjectDisposed.Fody
         /// </returns>
         public static IEnumerable<Instruction> GetGuardInstructions(ILProcessor ilProcessor,
                                                                     MemberReference memberReference,
-                                                                    MethodReference isDisposedPropertyDefinition,
+                                                                    MethodReference isDisposedPropertyReference,
                                                                     MethodReference objectDisposedExceptionReference)
         {
             var normalWay = ilProcessor.Body.Instructions.FirstOrDefault() ?? ilProcessor.Create(OpCodes.Ret);
@@ -42,7 +42,7 @@ namespace ObjectDisposed.Fody
             yield return ilProcessor.Create(OpCodes.Ldarg_0);
 
             // Call the parent method
-            yield return ilProcessor.Create(OpCodes.Call, isDisposedPropertyDefinition);
+            yield return ilProcessor.Create(OpCodes.Call, isDisposedPropertyReference);
 
             // Branch to the normal way whether the value on the stack is equals to 0
             yield return ilProcessor.Create(OpCodes.Brfalse_S, normalWay);
